@@ -11,7 +11,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 
-	licensev1 "github.com/kodeart/license-server/api/proto/license/v1"
+	licensev1 "github.com/kodeart/license-sdk-go/proto/license/v1"
 )
 
 const deploymentAPIKeyHeader = "x-deployment-api-key"

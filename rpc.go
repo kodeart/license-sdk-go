@@ -3,7 +3,7 @@ package license
 import (
 	"context"
 
-	licensev1 "github.com/kodeart/license-server/api/proto/license/v1"
+	licensev1 "github.com/kodeart/license-sdk-go/proto/license/v1"
 )
 
 // Activate redeems an activation code and creates a deployment. It returns
