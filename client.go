@@ -138,3 +138,11 @@ func (c *Client) ctxWithDeploymentKey(ctx context.Context) context.Context {
 	}
 	return metadata.AppendToOutgoingContext(ctx, deploymentAPIKeyHeader, c.Config.DeploymentAPIKey)
 }
+
+// ctxWithActivationCode attaches the activation code as the ONLY outgoing
+// credential for an Activate call. It deliberately replaces (not appends to)
+// any existing metadata so a pre-stored deployment key never reaches the
+// server as an extra header value, where it could be read ahead of the code.
+func (c *Client) ctxWithActivationCode(ctx context.Context, code string) context.Context {
+	return metadata.NewOutgoingContext(ctx, metadata.Pairs(deploymentAPIKeyHeader, code))
+}

@@ -10,12 +10,16 @@ import (
 // the signed license + lease tokens, the deployment API key, and the
 // deployment ID. Callers must persist the returned API key and ID and use
 // them for subsequent Heartbeat/FetchLicense/GetCRL calls.
+//
+// The activation code is the credential for this one call: it is sent as the
+// x-deployment-api-key header, never in the request body. A pre-stored
+// DeploymentAPIKey on the client is deliberately ignored for Activate so the
+// wrong key can never shadow the code.
 func (c *Client) Activate(ctx context.Context, activationCode, fingerprint, productCode, hostname string) (*licensev1.ActivateResponse, error) {
-	return c.svc.Activate(c.ctxWithDeploymentKey(ctx), &licensev1.ActivateRequest{
-		ActivationCode: activationCode,
-		Fingerprint:    fingerprint,
-		ProductCode:    productCode,
-		Hostname:       hostname,
+	return c.svc.Activate(c.ctxWithActivationCode(ctx, activationCode), &licensev1.ActivateRequest{
+		Fingerprint: fingerprint,
+		ProductCode: productCode,
+		Hostname:    hostname,
 	})
 }
 
