@@ -40,10 +40,21 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LicenseServiceClient interface {
+	// Heartbeat keeps a deployment's license or lease alive and picks up CRL
+	// updates; returns a fresh lease token and current server time.
 	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
+	// GetCRL returns certificate-revocation-list entries changed after a
+	// sequence id, so agents can drop revoked licenses without fetching the
+	// whole list every time.
 	GetCRL(ctx context.Context, in *GetCRLRequest, opts ...grpc.CallOption) (*GetCRLResponse, error)
+	// ReportUsage records hourly usage metrics for a deployment.
 	ReportUsage(ctx context.Context, in *ReportUsageRequest, opts ...grpc.CallOption) (*ReportUsageResponse, error)
+	// FetchLicense returns the licenses bound to a deployment (or a specific
+	// license) as signed license tokens the agent can validate locally.
 	FetchLicense(ctx context.Context, in *FetchLicenseRequest, opts ...grpc.CallOption) (*FetchLicenseResponse, error)
+	// Activate redeems an activation code issued to a license and binds the
+	// node (fingerprint) as a deployment, returning the credentials the agent
+	// uses from then on.
 	Activate(ctx context.Context, in *ActivateRequest, opts ...grpc.CallOption) (*ActivateResponse, error)
 }
 
@@ -109,10 +120,21 @@ func (c *licenseServiceClient) Activate(ctx context.Context, in *ActivateRequest
 // All implementations must embed UnimplementedLicenseServiceServer
 // for forward compatibility.
 type LicenseServiceServer interface {
+	// Heartbeat keeps a deployment's license or lease alive and picks up CRL
+	// updates; returns a fresh lease token and current server time.
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	// GetCRL returns certificate-revocation-list entries changed after a
+	// sequence id, so agents can drop revoked licenses without fetching the
+	// whole list every time.
 	GetCRL(context.Context, *GetCRLRequest) (*GetCRLResponse, error)
+	// ReportUsage records hourly usage metrics for a deployment.
 	ReportUsage(context.Context, *ReportUsageRequest) (*ReportUsageResponse, error)
+	// FetchLicense returns the licenses bound to a deployment (or a specific
+	// license) as signed license tokens the agent can validate locally.
 	FetchLicense(context.Context, *FetchLicenseRequest) (*FetchLicenseResponse, error)
+	// Activate redeems an activation code issued to a license and binds the
+	// node (fingerprint) as a deployment, returning the credentials the agent
+	// uses from then on.
 	Activate(context.Context, *ActivateRequest) (*ActivateResponse, error)
 	mustEmbedUnimplementedLicenseServiceServer()
 }
@@ -288,6 +310,7 @@ const (
 	AdminService_ListTenants_FullMethodName             = "/license.v1.AdminService/ListTenants"
 	AdminService_UpdateTenant_FullMethodName            = "/license.v1.AdminService/UpdateTenant"
 	AdminService_CreateReseller_FullMethodName          = "/license.v1.AdminService/CreateReseller"
+	AdminService_UpdateReseller_FullMethodName          = "/license.v1.AdminService/UpdateReseller"
 	AdminService_CreateProduct_FullMethodName           = "/license.v1.AdminService/CreateProduct"
 	AdminService_GetProduct_FullMethodName              = "/license.v1.AdminService/GetProduct"
 	AdminService_ListProducts_FullMethodName            = "/license.v1.AdminService/ListProducts"
@@ -297,6 +320,7 @@ const (
 	AdminService_IssueLicense_FullMethodName            = "/license.v1.AdminService/IssueLicense"
 	AdminService_ReissueLicense_FullMethodName          = "/license.v1.AdminService/ReissueLicense"
 	AdminService_RevokeLicense_FullMethodName           = "/license.v1.AdminService/RevokeLicense"
+	AdminService_ResumeLicense_FullMethodName           = "/license.v1.AdminService/ResumeLicense"
 	AdminService_GetLicense_FullMethodName              = "/license.v1.AdminService/GetLicense"
 	AdminService_ListLicenses_FullMethodName            = "/license.v1.AdminService/ListLicenses"
 	AdminService_GetLicenseVersions_FullMethodName      = "/license.v1.AdminService/GetLicenseVersions"
@@ -318,45 +342,70 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AdminServiceClient interface {
-	// Tenants
+	// CreateTenant registers a platform-managed tenant and returns its API key.
 	CreateTenant(ctx context.Context, in *CreateTenantRequest, opts ...grpc.CallOption) (*TenantResponse, error)
+	// GetTenant fetches one tenant by ID.
 	GetTenant(ctx context.Context, in *GetTenantRequest, opts ...grpc.CallOption) (*TenantResponse, error)
+	// ListTenants pages tenants by status and region, with case-insensitive name search.
 	ListTenants(ctx context.Context, in *ListTenantsRequest, opts ...grpc.CallOption) (*ListTenantsResponse, error)
+	// UpdateTenant partially updates a tenant: status, name, or the identity user it is linked to (user_id).
 	UpdateTenant(ctx context.Context, in *UpdateTenantRequest, opts ...grpc.CallOption) (*TenantResponse, error)
-	// Resellers
+	// CreateReseller registers a reseller and returns its API key.
 	CreateReseller(ctx context.Context, in *CreateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
-	// Products
+	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
+	UpdateReseller(ctx context.Context, in *UpdateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
+	// CreateProduct registers a product that licenses can be issued for.
 	CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*ProductResponse, error)
+	// GetProduct fetches one product by ID.
 	GetProduct(ctx context.Context, in *GetProductRequest, opts ...grpc.CallOption) (*ProductResponse, error)
+	// ListProducts pages and filters products by status, with code/name search.
 	ListProducts(ctx context.Context, in *ListProductsRequest, opts ...grpc.CallOption) (*ListProductsResponse, error)
+	// UpdateProduct partially updates a product: display name, status, or module requirements.
 	UpdateProduct(ctx context.Context, in *UpdateProductRequest, opts ...grpc.CallOption) (*ProductResponse, error)
-	// Product Modules
+	// UpsertProductModules upserts a product module catalog and validates module dependencies.
 	UpsertProductModules(ctx context.Context, in *UpsertProductModulesRequest, opts ...grpc.CallOption) (*UpsertProductModulesResponse, error)
+	// GetProductModuleCatalog returns the module catalog available to a product.
 	GetProductModuleCatalog(ctx context.Context, in *GetProductModuleCatalogRequest, opts ...grpc.CallOption) (*GetProductModuleCatalogResponse, error)
-	// License Issuance
+	// IssueLicense issues a new license under a product and returns the signed token plus activation codes.
 	IssueLicense(ctx context.Context, in *IssueLicenseRequest, opts ...grpc.CallOption) (*IssueLicenseResponse, error)
+	// ReissueLicense mints a new JTI for an active license and adjusts its seats, max deployments, or expiry.
 	ReissueLicense(ctx context.Context, in *ReissueLicenseRequest, opts ...grpc.CallOption) (*ReissueLicenseResponse, error)
+	// RevokeLicense terminates a license immediately; revoked seats are reaped through the CRL.
 	RevokeLicense(ctx context.Context, in *RevokeLicenseRequest, opts ...grpc.CallOption) (*RevokeLicenseResponse, error)
-	// License Queries
+	// ResumeLicense lifts a SUSPENDED license back to active (e.g. payment
+	// settled). It mints a new JTI so every token issued before the suspension
+	// is dead. Refuses a revoked license: revocation is terminal by design and
+	// recovery from it means issuing a new license.
+	ResumeLicense(ctx context.Context, in *ResumeLicenseRequest, opts ...grpc.CallOption) (*ResumeLicenseResponse, error)
+	// GetLicense fetches one license by ID.
 	GetLicense(ctx context.Context, in *GetLicenseRequest, opts ...grpc.CallOption) (*GetLicenseResponse, error)
+	// ListLicenses pages and filters licenses by tenant, product, and status, with edition search.
 	ListLicenses(ctx context.Context, in *ListLicensesRequest, opts ...grpc.CallOption) (*ListLicensesResponse, error)
+	// GetLicenseVersions returns the version history of one license.
 	GetLicenseVersions(ctx context.Context, in *GetLicenseVersionsRequest, opts ...grpc.CallOption) (*GetLicenseVersionsResponse, error)
-	// Deployments
+	// ListDeployments pages deployments with tenant/product/status filters and fingerprint search.
 	ListDeployments(ctx context.Context, in *ListDeploymentsRequest, opts ...grpc.CallOption) (*ListDeploymentsResponse, error)
+	// GetDeployment fetches one deployment and the license version it binds.
 	GetDeployment(ctx context.Context, in *GetDeploymentRequest, opts ...grpc.CallOption) (*DeploymentResponse, error)
-	// Activation Codes
+	// CreateActivationCode issues an activation code for a license.
 	CreateActivationCode(ctx context.Context, in *CreateActivationCodeRequest, opts ...grpc.CallOption) (*ActivationCodeResponse, error)
+	// ListActivationCodes pages activation codes with optional license/status filters and prefix-only code search.
 	ListActivationCodes(ctx context.Context, in *ListActivationCodesRequest, opts ...grpc.CallOption) (*ListActivationCodesResponse, error)
-	// Signing Keys
+	// RotateSigningKey adds and activates a new signing key for a product.
 	RotateSigningKey(ctx context.Context, in *RotateSigningKeyRequest, opts ...grpc.CallOption) (*RotateSigningKeyResponse, error)
+	// ListSigningKeys lists a product signing keys, newest first.
 	ListSigningKeys(ctx context.Context, in *ListSigningKeysRequest, opts ...grpc.CallOption) (*ListSigningKeysResponse, error)
-	// Audit
+	// GetAuditLog pages the audit trail, optionally filtered by target type and id.
 	GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error)
+	// VerifyAuditChain recomputes the audit hash chain and reports whether the trail is intact.
 	VerifyAuditChain(ctx context.Context, in *VerifyAuditChainRequest, opts ...grpc.CallOption) (*VerifyAuditChainResponse, error)
-	// Billing Webhooks
+	// OnSubscriptionUpdated applies a billing subscription change (seats, expiry, modules; cancels short-circuit) to a license.
 	OnSubscriptionUpdated(ctx context.Context, in *SubscriptionEvent, opts ...grpc.CallOption) (*Empty, error)
+	// OnSubscriptionCancelled revokes the subscription license when a billing subscription is cancelled.
 	OnSubscriptionCancelled(ctx context.Context, in *SubscriptionEvent, opts ...grpc.CallOption) (*Empty, error)
+	// OnPaymentFailed records a failed payment and suspends the license after 3 consecutive failures.
 	OnPaymentFailed(ctx context.Context, in *PaymentFailedEvent, opts ...grpc.CallOption) (*Empty, error)
+	// OnTrialStarted issues a trial license (14 days by default) for a tenant and product.
 	OnTrialStarted(ctx context.Context, in *TrialStartedEvent, opts ...grpc.CallOption) (*Empty, error)
 }
 
@@ -412,6 +461,16 @@ func (c *adminServiceClient) CreateReseller(ctx context.Context, in *CreateResel
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResellerResponse)
 	err := c.cc.Invoke(ctx, AdminService_CreateReseller_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) UpdateReseller(ctx context.Context, in *UpdateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResellerResponse)
+	err := c.cc.Invoke(ctx, AdminService_UpdateReseller_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -502,6 +561,16 @@ func (c *adminServiceClient) RevokeLicense(ctx context.Context, in *RevokeLicens
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RevokeLicenseResponse)
 	err := c.cc.Invoke(ctx, AdminService_RevokeLicense_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ResumeLicense(ctx context.Context, in *ResumeLicenseRequest, opts ...grpc.CallOption) (*ResumeLicenseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResumeLicenseResponse)
+	err := c.cc.Invoke(ctx, AdminService_ResumeLicense_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -662,45 +731,70 @@ func (c *adminServiceClient) OnTrialStarted(ctx context.Context, in *TrialStarte
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
 type AdminServiceServer interface {
-	// Tenants
+	// CreateTenant registers a platform-managed tenant and returns its API key.
 	CreateTenant(context.Context, *CreateTenantRequest) (*TenantResponse, error)
+	// GetTenant fetches one tenant by ID.
 	GetTenant(context.Context, *GetTenantRequest) (*TenantResponse, error)
+	// ListTenants pages tenants by status and region, with case-insensitive name search.
 	ListTenants(context.Context, *ListTenantsRequest) (*ListTenantsResponse, error)
+	// UpdateTenant partially updates a tenant: status, name, or the identity user it is linked to (user_id).
 	UpdateTenant(context.Context, *UpdateTenantRequest) (*TenantResponse, error)
-	// Resellers
+	// CreateReseller registers a reseller and returns its API key.
 	CreateReseller(context.Context, *CreateResellerRequest) (*ResellerResponse, error)
-	// Products
+	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
+	UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error)
+	// CreateProduct registers a product that licenses can be issued for.
 	CreateProduct(context.Context, *CreateProductRequest) (*ProductResponse, error)
+	// GetProduct fetches one product by ID.
 	GetProduct(context.Context, *GetProductRequest) (*ProductResponse, error)
+	// ListProducts pages and filters products by status, with code/name search.
 	ListProducts(context.Context, *ListProductsRequest) (*ListProductsResponse, error)
+	// UpdateProduct partially updates a product: display name, status, or module requirements.
 	UpdateProduct(context.Context, *UpdateProductRequest) (*ProductResponse, error)
-	// Product Modules
+	// UpsertProductModules upserts a product module catalog and validates module dependencies.
 	UpsertProductModules(context.Context, *UpsertProductModulesRequest) (*UpsertProductModulesResponse, error)
+	// GetProductModuleCatalog returns the module catalog available to a product.
 	GetProductModuleCatalog(context.Context, *GetProductModuleCatalogRequest) (*GetProductModuleCatalogResponse, error)
-	// License Issuance
+	// IssueLicense issues a new license under a product and returns the signed token plus activation codes.
 	IssueLicense(context.Context, *IssueLicenseRequest) (*IssueLicenseResponse, error)
+	// ReissueLicense mints a new JTI for an active license and adjusts its seats, max deployments, or expiry.
 	ReissueLicense(context.Context, *ReissueLicenseRequest) (*ReissueLicenseResponse, error)
+	// RevokeLicense terminates a license immediately; revoked seats are reaped through the CRL.
 	RevokeLicense(context.Context, *RevokeLicenseRequest) (*RevokeLicenseResponse, error)
-	// License Queries
+	// ResumeLicense lifts a SUSPENDED license back to active (e.g. payment
+	// settled). It mints a new JTI so every token issued before the suspension
+	// is dead. Refuses a revoked license: revocation is terminal by design and
+	// recovery from it means issuing a new license.
+	ResumeLicense(context.Context, *ResumeLicenseRequest) (*ResumeLicenseResponse, error)
+	// GetLicense fetches one license by ID.
 	GetLicense(context.Context, *GetLicenseRequest) (*GetLicenseResponse, error)
+	// ListLicenses pages and filters licenses by tenant, product, and status, with edition search.
 	ListLicenses(context.Context, *ListLicensesRequest) (*ListLicensesResponse, error)
+	// GetLicenseVersions returns the version history of one license.
 	GetLicenseVersions(context.Context, *GetLicenseVersionsRequest) (*GetLicenseVersionsResponse, error)
-	// Deployments
+	// ListDeployments pages deployments with tenant/product/status filters and fingerprint search.
 	ListDeployments(context.Context, *ListDeploymentsRequest) (*ListDeploymentsResponse, error)
+	// GetDeployment fetches one deployment and the license version it binds.
 	GetDeployment(context.Context, *GetDeploymentRequest) (*DeploymentResponse, error)
-	// Activation Codes
+	// CreateActivationCode issues an activation code for a license.
 	CreateActivationCode(context.Context, *CreateActivationCodeRequest) (*ActivationCodeResponse, error)
+	// ListActivationCodes pages activation codes with optional license/status filters and prefix-only code search.
 	ListActivationCodes(context.Context, *ListActivationCodesRequest) (*ListActivationCodesResponse, error)
-	// Signing Keys
+	// RotateSigningKey adds and activates a new signing key for a product.
 	RotateSigningKey(context.Context, *RotateSigningKeyRequest) (*RotateSigningKeyResponse, error)
+	// ListSigningKeys lists a product signing keys, newest first.
 	ListSigningKeys(context.Context, *ListSigningKeysRequest) (*ListSigningKeysResponse, error)
-	// Audit
+	// GetAuditLog pages the audit trail, optionally filtered by target type and id.
 	GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error)
+	// VerifyAuditChain recomputes the audit hash chain and reports whether the trail is intact.
 	VerifyAuditChain(context.Context, *VerifyAuditChainRequest) (*VerifyAuditChainResponse, error)
-	// Billing Webhooks
+	// OnSubscriptionUpdated applies a billing subscription change (seats, expiry, modules; cancels short-circuit) to a license.
 	OnSubscriptionUpdated(context.Context, *SubscriptionEvent) (*Empty, error)
+	// OnSubscriptionCancelled revokes the subscription license when a billing subscription is cancelled.
 	OnSubscriptionCancelled(context.Context, *SubscriptionEvent) (*Empty, error)
+	// OnPaymentFailed records a failed payment and suspends the license after 3 consecutive failures.
 	OnPaymentFailed(context.Context, *PaymentFailedEvent) (*Empty, error)
+	// OnTrialStarted issues a trial license (14 days by default) for a tenant and product.
 	OnTrialStarted(context.Context, *TrialStartedEvent) (*Empty, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
@@ -726,6 +820,9 @@ func (UnimplementedAdminServiceServer) UpdateTenant(context.Context, *UpdateTena
 }
 func (UnimplementedAdminServiceServer) CreateReseller(context.Context, *CreateResellerRequest) (*ResellerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateReseller not implemented")
+}
+func (UnimplementedAdminServiceServer) UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateReseller not implemented")
 }
 func (UnimplementedAdminServiceServer) CreateProduct(context.Context, *CreateProductRequest) (*ProductResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateProduct not implemented")
@@ -753,6 +850,9 @@ func (UnimplementedAdminServiceServer) ReissueLicense(context.Context, *ReissueL
 }
 func (UnimplementedAdminServiceServer) RevokeLicense(context.Context, *RevokeLicenseRequest) (*RevokeLicenseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeLicense not implemented")
+}
+func (UnimplementedAdminServiceServer) ResumeLicense(context.Context, *ResumeLicenseRequest) (*ResumeLicenseResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResumeLicense not implemented")
 }
 func (UnimplementedAdminServiceServer) GetLicense(context.Context, *GetLicenseRequest) (*GetLicenseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetLicense not implemented")
@@ -906,6 +1006,24 @@ func _AdminService_CreateReseller_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).CreateReseller(ctx, req.(*CreateResellerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_UpdateReseller_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateResellerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).UpdateReseller(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_UpdateReseller_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).UpdateReseller(ctx, req.(*UpdateResellerRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1068,6 +1186,24 @@ func _AdminService_RevokeLicense_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).RevokeLicense(ctx, req.(*RevokeLicenseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ResumeLicense_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResumeLicenseRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ResumeLicense(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ResumeLicense_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ResumeLicense(ctx, req.(*ResumeLicenseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1370,6 +1506,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AdminService_CreateReseller_Handler,
 		},
 		{
+			MethodName: "UpdateReseller",
+			Handler:    _AdminService_UpdateReseller_Handler,
+		},
+		{
 			MethodName: "CreateProduct",
 			Handler:    _AdminService_CreateProduct_Handler,
 		},
@@ -1404,6 +1544,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RevokeLicense",
 			Handler:    _AdminService_RevokeLicense_Handler,
+		},
+		{
+			MethodName: "ResumeLicense",
+			Handler:    _AdminService_ResumeLicense_Handler,
 		},
 		{
 			MethodName: "GetLicense",
@@ -1485,13 +1629,21 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ResellerServiceClient interface {
+	// ListProducts returns the products a reseller is enrolled for.
 	ListProducts(ctx context.Context, in *ResellerListProductsRequest, opts ...grpc.CallOption) (*ResellerListProductsResponse, error)
+	// IssueLicense issues a license under a reseller per-product quota.
 	IssueLicense(ctx context.Context, in *ResellerIssueLicenseRequest, opts ...grpc.CallOption) (*ResellerIssueLicenseResponse, error)
+	// CreateActivationCode creates an activation code for one of the reseller own licenses.
 	CreateActivationCode(ctx context.Context, in *ResellerCreateActivationCodeRequest, opts ...grpc.CallOption) (*ActivationCodeResponse, error)
+	// GetLicense fetches one license owned by the reseller.
 	GetLicense(ctx context.Context, in *ResellerGetLicenseRequest, opts ...grpc.CallOption) (*GetLicenseResponse, error)
+	// ListLicenses pages the reseller licenses with product/status filters and edition search.
 	ListLicenses(ctx context.Context, in *ResellerListLicensesRequest, opts ...grpc.CallOption) (*ResellerListLicensesResponse, error)
+	// GetDeployment fetches one deployment bound to a reseller-owned license.
 	GetDeployment(ctx context.Context, in *ResellerGetDeploymentRequest, opts ...grpc.CallOption) (*DeploymentResponse, error)
+	// ListDeployments pages the reseller deployments with product/status filters and fingerprint search.
 	ListDeployments(ctx context.Context, in *ResellerListDeploymentsRequest, opts ...grpc.CallOption) (*ResellerListDeploymentsResponse, error)
+	// CheckQuota returns how many licenses a reseller has left under a product before the quota blocks new issues.
 	CheckQuota(ctx context.Context, in *ResellerCheckQuotaRequest, opts ...grpc.CallOption) (*ResellerCheckQuotaResponse, error)
 }
 
@@ -1587,13 +1739,21 @@ func (c *resellerServiceClient) CheckQuota(ctx context.Context, in *ResellerChec
 // All implementations must embed UnimplementedResellerServiceServer
 // for forward compatibility.
 type ResellerServiceServer interface {
+	// ListProducts returns the products a reseller is enrolled for.
 	ListProducts(context.Context, *ResellerListProductsRequest) (*ResellerListProductsResponse, error)
+	// IssueLicense issues a license under a reseller per-product quota.
 	IssueLicense(context.Context, *ResellerIssueLicenseRequest) (*ResellerIssueLicenseResponse, error)
+	// CreateActivationCode creates an activation code for one of the reseller own licenses.
 	CreateActivationCode(context.Context, *ResellerCreateActivationCodeRequest) (*ActivationCodeResponse, error)
+	// GetLicense fetches one license owned by the reseller.
 	GetLicense(context.Context, *ResellerGetLicenseRequest) (*GetLicenseResponse, error)
+	// ListLicenses pages the reseller licenses with product/status filters and edition search.
 	ListLicenses(context.Context, *ResellerListLicensesRequest) (*ResellerListLicensesResponse, error)
+	// GetDeployment fetches one deployment bound to a reseller-owned license.
 	GetDeployment(context.Context, *ResellerGetDeploymentRequest) (*DeploymentResponse, error)
+	// ListDeployments pages the reseller deployments with product/status filters and fingerprint search.
 	ListDeployments(context.Context, *ResellerListDeploymentsRequest) (*ResellerListDeploymentsResponse, error)
+	// CheckQuota returns how many licenses a reseller has left under a product before the quota blocks new issues.
 	CheckQuota(context.Context, *ResellerCheckQuotaRequest) (*ResellerCheckQuotaResponse, error)
 	mustEmbedUnimplementedResellerServiceServer()
 }
@@ -1855,20 +2015,25 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TenantServiceClient interface {
-	// --- Profile ---
+	// GetProfile returns the tenant own profile.
 	GetProfile(ctx context.Context, in *TenantGetProfileRequest, opts ...grpc.CallOption) (*TenantResponse, error)
+	// UpdateProfile renames the tenant.
 	UpdateProfile(ctx context.Context, in *TenantUpdateProfileRequest, opts ...grpc.CallOption) (*TenantResponse, error)
-	// --- Licenses (read-only) ---
+	// ListMyLicenses pages the tenant own licenses with product/status filters and edition search.
 	ListMyLicenses(ctx context.Context, in *TenantListLicensesRequest, opts ...grpc.CallOption) (*TenantListLicensesResponse, error)
+	// GetLicense fetches one of the tenant own licenses.
 	GetLicense(ctx context.Context, in *TenantGetLicenseRequest, opts ...grpc.CallOption) (*GetLicenseResponse, error)
+	// GetLicenseToken returns a signed license token a tenant can hand to an offline client.
 	GetLicenseToken(ctx context.Context, in *TenantGetLicenseTokenRequest, opts ...grpc.CallOption) (*TenantLicenseTokenResponse, error)
-	// --- Deployments (view + deactivate) ---
+	// ListMyDeployments pages the tenant own deployments with product/status filters and fingerprint search.
 	ListMyDeployments(ctx context.Context, in *TenantListDeploymentsRequest, opts ...grpc.CallOption) (*TenantListDeploymentsResponse, error)
+	// DeactivateDeployment unbinds a deployment from its license.
 	DeactivateDeployment(ctx context.Context, in *TenantDeactivateDeploymentRequest, opts ...grpc.CallOption) (*TenantDeactivateDeploymentResponse, error)
-	// --- Activation Codes ---
+	// CreateActivationCode creates an activation code for one of the tenant own licenses.
 	CreateActivationCode(ctx context.Context, in *TenantCreateActivationCodeRequest, opts ...grpc.CallOption) (*ActivationCodeResponse, error)
+	// ListActivationCodes pages activation codes for the tenant own licenses with prefix-only code search.
 	ListActivationCodes(ctx context.Context, in *TenantListActivationCodesRequest, opts ...grpc.CallOption) (*TenantListActivationCodesResponse, error)
-	// --- Usage ---
+	// GetUsageSummary returns license and deployment counts for one of the tenant products.
 	GetUsageSummary(ctx context.Context, in *TenantUsageSummaryRequest, opts ...grpc.CallOption) (*TenantUsageSummaryResponse, error)
 }
 
@@ -1984,20 +2149,25 @@ func (c *tenantServiceClient) GetUsageSummary(ctx context.Context, in *TenantUsa
 // All implementations must embed UnimplementedTenantServiceServer
 // for forward compatibility.
 type TenantServiceServer interface {
-	// --- Profile ---
+	// GetProfile returns the tenant own profile.
 	GetProfile(context.Context, *TenantGetProfileRequest) (*TenantResponse, error)
+	// UpdateProfile renames the tenant.
 	UpdateProfile(context.Context, *TenantUpdateProfileRequest) (*TenantResponse, error)
-	// --- Licenses (read-only) ---
+	// ListMyLicenses pages the tenant own licenses with product/status filters and edition search.
 	ListMyLicenses(context.Context, *TenantListLicensesRequest) (*TenantListLicensesResponse, error)
+	// GetLicense fetches one of the tenant own licenses.
 	GetLicense(context.Context, *TenantGetLicenseRequest) (*GetLicenseResponse, error)
+	// GetLicenseToken returns a signed license token a tenant can hand to an offline client.
 	GetLicenseToken(context.Context, *TenantGetLicenseTokenRequest) (*TenantLicenseTokenResponse, error)
-	// --- Deployments (view + deactivate) ---
+	// ListMyDeployments pages the tenant own deployments with product/status filters and fingerprint search.
 	ListMyDeployments(context.Context, *TenantListDeploymentsRequest) (*TenantListDeploymentsResponse, error)
+	// DeactivateDeployment unbinds a deployment from its license.
 	DeactivateDeployment(context.Context, *TenantDeactivateDeploymentRequest) (*TenantDeactivateDeploymentResponse, error)
-	// --- Activation Codes ---
+	// CreateActivationCode creates an activation code for one of the tenant own licenses.
 	CreateActivationCode(context.Context, *TenantCreateActivationCodeRequest) (*ActivationCodeResponse, error)
+	// ListActivationCodes pages activation codes for the tenant own licenses with prefix-only code search.
 	ListActivationCodes(context.Context, *TenantListActivationCodesRequest) (*TenantListActivationCodesResponse, error)
-	// --- Usage ---
+	// GetUsageSummary returns license and deployment counts for one of the tenant products.
 	GetUsageSummary(context.Context, *TenantUsageSummaryRequest) (*TenantUsageSummaryResponse, error)
 	mustEmbedUnimplementedTenantServiceServer()
 }
