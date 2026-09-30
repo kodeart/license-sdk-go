@@ -311,6 +311,8 @@ const (
 	AdminService_UpdateTenant_FullMethodName            = "/license.v1.AdminService/UpdateTenant"
 	AdminService_CreateReseller_FullMethodName          = "/license.v1.AdminService/CreateReseller"
 	AdminService_UpdateReseller_FullMethodName          = "/license.v1.AdminService/UpdateReseller"
+	AdminService_CreateResellerQuota_FullMethodName     = "/license.v1.AdminService/CreateResellerQuota"
+	AdminService_ListResellerQuotas_FullMethodName      = "/license.v1.AdminService/ListResellerQuotas"
 	AdminService_CreateProduct_FullMethodName           = "/license.v1.AdminService/CreateProduct"
 	AdminService_GetProduct_FullMethodName              = "/license.v1.AdminService/GetProduct"
 	AdminService_ListProducts_FullMethodName            = "/license.v1.AdminService/ListProducts"
@@ -354,6 +356,11 @@ type AdminServiceClient interface {
 	CreateReseller(ctx context.Context, in *CreateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
 	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
 	UpdateReseller(ctx context.Context, in *UpdateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
+	// CreateResellerQuota grants (or re-grants) a reseller quota for a product/type
+	// combination, updating the limit and resetting the period when it already exists.
+	CreateResellerQuota(ctx context.Context, in *CreateResellerQuotaRequest, opts ...grpc.CallOption) (*ResellerQuotaResponse, error)
+	// ListResellerQuotas lists the quotas configured for a reseller.
+	ListResellerQuotas(ctx context.Context, in *ListResellerQuotasRequest, opts ...grpc.CallOption) (*ListResellerQuotasResponse, error)
 	// CreateProduct registers a product that licenses can be issued for.
 	CreateProduct(ctx context.Context, in *CreateProductRequest, opts ...grpc.CallOption) (*ProductResponse, error)
 	// GetProduct fetches one product by ID.
@@ -471,6 +478,26 @@ func (c *adminServiceClient) UpdateReseller(ctx context.Context, in *UpdateResel
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResellerResponse)
 	err := c.cc.Invoke(ctx, AdminService_UpdateReseller_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) CreateResellerQuota(ctx context.Context, in *CreateResellerQuotaRequest, opts ...grpc.CallOption) (*ResellerQuotaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResellerQuotaResponse)
+	err := c.cc.Invoke(ctx, AdminService_CreateResellerQuota_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListResellerQuotas(ctx context.Context, in *ListResellerQuotasRequest, opts ...grpc.CallOption) (*ListResellerQuotasResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListResellerQuotasResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListResellerQuotas_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -743,6 +770,11 @@ type AdminServiceServer interface {
 	CreateReseller(context.Context, *CreateResellerRequest) (*ResellerResponse, error)
 	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
 	UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error)
+	// CreateResellerQuota grants (or re-grants) a reseller quota for a product/type
+	// combination, updating the limit and resetting the period when it already exists.
+	CreateResellerQuota(context.Context, *CreateResellerQuotaRequest) (*ResellerQuotaResponse, error)
+	// ListResellerQuotas lists the quotas configured for a reseller.
+	ListResellerQuotas(context.Context, *ListResellerQuotasRequest) (*ListResellerQuotasResponse, error)
 	// CreateProduct registers a product that licenses can be issued for.
 	CreateProduct(context.Context, *CreateProductRequest) (*ProductResponse, error)
 	// GetProduct fetches one product by ID.
@@ -823,6 +855,12 @@ func (UnimplementedAdminServiceServer) CreateReseller(context.Context, *CreateRe
 }
 func (UnimplementedAdminServiceServer) UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateReseller not implemented")
+}
+func (UnimplementedAdminServiceServer) CreateResellerQuota(context.Context, *CreateResellerQuotaRequest) (*ResellerQuotaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateResellerQuota not implemented")
+}
+func (UnimplementedAdminServiceServer) ListResellerQuotas(context.Context, *ListResellerQuotasRequest) (*ListResellerQuotasResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListResellerQuotas not implemented")
 }
 func (UnimplementedAdminServiceServer) CreateProduct(context.Context, *CreateProductRequest) (*ProductResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateProduct not implemented")
@@ -1024,6 +1062,42 @@ func _AdminService_UpdateReseller_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).UpdateReseller(ctx, req.(*UpdateResellerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_CreateResellerQuota_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateResellerQuotaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).CreateResellerQuota(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_CreateResellerQuota_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).CreateResellerQuota(ctx, req.(*CreateResellerQuotaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListResellerQuotas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListResellerQuotasRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListResellerQuotas(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListResellerQuotas_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListResellerQuotas(ctx, req.(*ListResellerQuotasRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1508,6 +1582,14 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateReseller",
 			Handler:    _AdminService_UpdateReseller_Handler,
+		},
+		{
+			MethodName: "CreateResellerQuota",
+			Handler:    _AdminService_CreateResellerQuota_Handler,
+		},
+		{
+			MethodName: "ListResellerQuotas",
+			Handler:    _AdminService_ListResellerQuotas_Handler,
 		},
 		{
 			MethodName: "CreateProduct",

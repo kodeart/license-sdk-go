@@ -10,7 +10,7 @@ type LicenseClaims struct {
 	JTI                string        `json:"jti"`
 	IAT                int64         `json:"iat"`
 	NBF                int64         `json:"nbf,omitempty"`
-	EXP                int64         `json:"exp,omitempty"`
+	EXP                int64         `json:"exp"`
 	Dep                string        `json:"dep"`
 	FP                 string        `json:"fp,omitempty"`
 	TenantModel        string        `json:"tenant_model"`

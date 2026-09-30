@@ -1,6 +1,7 @@
 package license
 
 import (
+	"bytes"
 	"crypto/ed25519"
 	"encoding/base64"
 	"encoding/json"
@@ -53,6 +54,33 @@ func TestVerifyLicenseToken_RoundTrip(t *testing.T) {
 	}
 	if claims.MaxDeployments != 3 {
 		t.Errorf("max_deployments = %d, want 3", claims.MaxDeployments)
+	}
+}
+
+func TestVerifyLicenseToken_PerpetualExp(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	SetPublicKey(pub)
+
+	claims := LicenseClaims{
+		Sub: "tenant-p", Aud: "ERP", JTI: "jti-perp", Dep: "dep-p",
+		TenantModel: "single", LicensingModel: "perpetual", Type: "perpetual",
+		EXP: 253402300799999,
+	}
+
+	token := signJWS(t, priv, "kid-1", claims)
+	if _, err := VerifyLicenseToken(token); err != nil {
+		t.Fatalf("VerifyLicenseToken: %v", err)
+	}
+
+	payloadJSON, err := json.Marshal(claims)
+	if err != nil {
+		t.Fatalf("marshal claims: %v", err)
+	}
+	if !bytes.Contains(payloadJSON, []byte(`"exp":253402300799999`)) {
+		t.Errorf("payload lacks always-present exp: %s", payloadJSON)
 	}
 }
 
