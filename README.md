@@ -29,7 +29,10 @@ defer cli.Close()
 
 ### Offline verification
 
-Bake the server's Ed25519 public key in once, then verify tokens locally:
+Bake the server's Ed25519 public key in once, then verify tokens locally.
+Verification is **strict**: the signature is checked against the key matching
+the token's `kid`, and the token's `exp`/`nbf` are enforced against the current
+time (with 30s skew). `err == nil` means the token is valid **right now**.
 
 ```go
 license.SetPublicKey(serverPublicKey) // raw 32 bytes, e.g. from keys/sk_*.pub
@@ -38,8 +41,39 @@ claims, err := license.VerifyLicenseToken(token)
 // claims.Seats, claims.Modules, claims.MaxDeployments, ...
 ```
 
+Perpetual licenses (valid_to == 0) carry the far-future `PerpetualExpiryMS`
+exp and never expire. Use `IsExpired`/`ValidUntil` to surface remaining
+validity to users:
+
+```go
+claims, _ := license.VerifyLicenseToken(token)
+if license.IsExpired(claims, time.Now()) { /* token lapsed */ }
+// license.ValidUntil(claims) -> zero Time for perpetual
+```
+
+### Key rotation
+
+A product can rotate its signing key without breaking clients. Install the
+server's current keys (all of them) via `SetPublicKeys`, keyed by the JWS
+`kid`; the server also publishes them over the unauthenticated
+`GetSigningKeys` RPC (`/v1/license/signing-keys`). Retired keys keep
+validating old tokens until removed from the set.
+
+```go
+keys := map[string]ed25519.PublicKey{
+    "kid-active":  activePub,
+    "kid-retired": retiringPub,
+}
+license.SetPublicKeys(keys)
+// tokens signed by either key verify; lookups are by kid header
+```
+
+Tokens without a `kid` header fall back to the default `license.PublicKey`
+set via `SetPublicKey`. `AddPublicKey(kid, pk)` adds a single key to the set.
+
 `ParseLicenseToken`/`ParseLeaseToken` decode claims without verifying the
-signature.
+signature and without enforcing time — use them to inspect a token before
+deciding how to verify it.
 
 ### Activation
 

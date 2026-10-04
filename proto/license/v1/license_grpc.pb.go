@@ -29,11 +29,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	LicenseService_Heartbeat_FullMethodName    = "/license.v1.LicenseService/Heartbeat"
-	LicenseService_GetCRL_FullMethodName       = "/license.v1.LicenseService/GetCRL"
-	LicenseService_ReportUsage_FullMethodName  = "/license.v1.LicenseService/ReportUsage"
-	LicenseService_FetchLicense_FullMethodName = "/license.v1.LicenseService/FetchLicense"
-	LicenseService_Activate_FullMethodName     = "/license.v1.LicenseService/Activate"
+	LicenseService_Heartbeat_FullMethodName      = "/license.v1.LicenseService/Heartbeat"
+	LicenseService_GetCRL_FullMethodName         = "/license.v1.LicenseService/GetCRL"
+	LicenseService_ReportUsage_FullMethodName    = "/license.v1.LicenseService/ReportUsage"
+	LicenseService_FetchLicense_FullMethodName   = "/license.v1.LicenseService/FetchLicense"
+	LicenseService_GetSigningKeys_FullMethodName = "/license.v1.LicenseService/GetSigningKeys"
+	LicenseService_Activate_FullMethodName       = "/license.v1.LicenseService/Activate"
 )
 
 // LicenseServiceClient is the client API for LicenseService service.
@@ -52,6 +53,10 @@ type LicenseServiceClient interface {
 	// FetchLicense returns the licenses bound to a deployment (or a specific
 	// license) as signed license tokens the agent can validate locally.
 	FetchLicense(ctx context.Context, in *FetchLicenseRequest, opts ...grpc.CallOption) (*FetchLicenseResponse, error)
+	// GetSigningKeys returns the publicly-verifiable signing keys (active and
+	// retiring) for a product, so SDKs and agents can validate rotated license
+	// tokens. Public keys only; no authentication required.
+	GetSigningKeys(ctx context.Context, in *GetSigningKeysRequest, opts ...grpc.CallOption) (*GetSigningKeysResponse, error)
 	// Activate redeems an activation code issued to a license and binds the
 	// node (fingerprint) as a deployment, returning the credentials the agent
 	// uses from then on.
@@ -106,6 +111,16 @@ func (c *licenseServiceClient) FetchLicense(ctx context.Context, in *FetchLicens
 	return out, nil
 }
 
+func (c *licenseServiceClient) GetSigningKeys(ctx context.Context, in *GetSigningKeysRequest, opts ...grpc.CallOption) (*GetSigningKeysResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSigningKeysResponse)
+	err := c.cc.Invoke(ctx, LicenseService_GetSigningKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *licenseServiceClient) Activate(ctx context.Context, in *ActivateRequest, opts ...grpc.CallOption) (*ActivateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ActivateResponse)
@@ -132,6 +147,10 @@ type LicenseServiceServer interface {
 	// FetchLicense returns the licenses bound to a deployment (or a specific
 	// license) as signed license tokens the agent can validate locally.
 	FetchLicense(context.Context, *FetchLicenseRequest) (*FetchLicenseResponse, error)
+	// GetSigningKeys returns the publicly-verifiable signing keys (active and
+	// retiring) for a product, so SDKs and agents can validate rotated license
+	// tokens. Public keys only; no authentication required.
+	GetSigningKeys(context.Context, *GetSigningKeysRequest) (*GetSigningKeysResponse, error)
 	// Activate redeems an activation code issued to a license and binds the
 	// node (fingerprint) as a deployment, returning the credentials the agent
 	// uses from then on.
@@ -157,6 +176,9 @@ func (UnimplementedLicenseServiceServer) ReportUsage(context.Context, *ReportUsa
 }
 func (UnimplementedLicenseServiceServer) FetchLicense(context.Context, *FetchLicenseRequest) (*FetchLicenseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FetchLicense not implemented")
+}
+func (UnimplementedLicenseServiceServer) GetSigningKeys(context.Context, *GetSigningKeysRequest) (*GetSigningKeysResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSigningKeys not implemented")
 }
 func (UnimplementedLicenseServiceServer) Activate(context.Context, *ActivateRequest) (*ActivateResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Activate not implemented")
@@ -254,6 +276,24 @@ func _LicenseService_FetchLicense_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LicenseService_GetSigningKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSigningKeysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LicenseServiceServer).GetSigningKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LicenseService_GetSigningKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LicenseServiceServer).GetSigningKeys(ctx, req.(*GetSigningKeysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _LicenseService_Activate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ActivateRequest)
 	if err := dec(in); err != nil {
@@ -294,6 +334,10 @@ var LicenseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FetchLicense",
 			Handler:    _LicenseService_FetchLicense_Handler,
+		},
+		{
+			MethodName: "GetSigningKeys",
+			Handler:    _LicenseService_GetSigningKeys_Handler,
 		},
 		{
 			MethodName: "Activate",

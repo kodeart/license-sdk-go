@@ -12,7 +12,6 @@ type LicenseClaims struct {
 	NBF                int64         `json:"nbf,omitempty"`
 	EXP                int64         `json:"exp"`
 	Dep                string        `json:"dep"`
-	FP                 string        `json:"fp,omitempty"`
 	TenantModel        string        `json:"tenant_model"`
 	LicensingModel     string        `json:"licensing_model"`
 	Edition            string        `json:"edition,omitempty"`
@@ -21,7 +20,6 @@ type LicenseClaims struct {
 	MaxDeployments     int           `json:"max_deployments,omitempty"`
 	Modules            []ModuleEntry `json:"modules,omitempty"`
 	Tenants            []TenantEntry `json:"tenants,omitempty"`
-	DefaultModules     []string      `json:"default_modules,omitempty"`
 	MaxTenants         int           `json:"max_tenants,omitempty"`
 	LeaseDuration      int64         `json:"lease_duration"`
 	RefreshInterval    int64         `json:"refresh_interval"`
