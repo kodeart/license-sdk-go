@@ -354,6 +354,7 @@ const (
 	AdminService_ListTenants_FullMethodName             = "/license.v1.AdminService/ListTenants"
 	AdminService_UpdateTenant_FullMethodName            = "/license.v1.AdminService/UpdateTenant"
 	AdminService_CreateReseller_FullMethodName          = "/license.v1.AdminService/CreateReseller"
+	AdminService_ListResellers_FullMethodName           = "/license.v1.AdminService/ListResellers"
 	AdminService_UpdateReseller_FullMethodName          = "/license.v1.AdminService/UpdateReseller"
 	AdminService_CreateResellerQuota_FullMethodName     = "/license.v1.AdminService/CreateResellerQuota"
 	AdminService_ListResellerQuotas_FullMethodName      = "/license.v1.AdminService/ListResellerQuotas"
@@ -398,6 +399,8 @@ type AdminServiceClient interface {
 	UpdateTenant(ctx context.Context, in *UpdateTenantRequest, opts ...grpc.CallOption) (*TenantResponse, error)
 	// CreateReseller registers a reseller and returns its API key.
 	CreateReseller(ctx context.Context, in *CreateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
+	// ListResellers pages the partners for the admin overview, with case-insensitive name search.
+	ListResellers(ctx context.Context, in *ListResellersRequest, opts ...grpc.CallOption) (*ListResellersResponse, error)
 	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
 	UpdateReseller(ctx context.Context, in *UpdateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
 	// CreateResellerQuota grants (or re-grants) a reseller quota for a product/type
@@ -512,6 +515,16 @@ func (c *adminServiceClient) CreateReseller(ctx context.Context, in *CreateResel
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResellerResponse)
 	err := c.cc.Invoke(ctx, AdminService_CreateReseller_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListResellers(ctx context.Context, in *ListResellersRequest, opts ...grpc.CallOption) (*ListResellersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListResellersResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListResellers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -812,6 +825,8 @@ type AdminServiceServer interface {
 	UpdateTenant(context.Context, *UpdateTenantRequest) (*TenantResponse, error)
 	// CreateReseller registers a reseller and returns its API key.
 	CreateReseller(context.Context, *CreateResellerRequest) (*ResellerResponse, error)
+	// ListResellers pages the partners for the admin overview, with case-insensitive name search.
+	ListResellers(context.Context, *ListResellersRequest) (*ListResellersResponse, error)
 	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
 	UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error)
 	// CreateResellerQuota grants (or re-grants) a reseller quota for a product/type
@@ -896,6 +911,9 @@ func (UnimplementedAdminServiceServer) UpdateTenant(context.Context, *UpdateTena
 }
 func (UnimplementedAdminServiceServer) CreateReseller(context.Context, *CreateResellerRequest) (*ResellerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateReseller not implemented")
+}
+func (UnimplementedAdminServiceServer) ListResellers(context.Context, *ListResellersRequest) (*ListResellersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListResellers not implemented")
 }
 func (UnimplementedAdminServiceServer) UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateReseller not implemented")
@@ -1088,6 +1106,24 @@ func _AdminService_CreateReseller_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).CreateReseller(ctx, req.(*CreateResellerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListResellers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListResellersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListResellers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListResellers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListResellers(ctx, req.(*ListResellersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1624,6 +1660,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AdminService_CreateReseller_Handler,
 		},
 		{
+			MethodName: "ListResellers",
+			Handler:    _AdminService_ListResellers_Handler,
+		},
+		{
 			MethodName: "UpdateReseller",
 			Handler:    _AdminService_UpdateReseller_Handler,
 		},
@@ -1749,6 +1789,8 @@ const (
 	ResellerService_GetDeployment_FullMethodName        = "/license.v1.ResellerService/GetDeployment"
 	ResellerService_ListDeployments_FullMethodName      = "/license.v1.ResellerService/ListDeployments"
 	ResellerService_CheckQuota_FullMethodName           = "/license.v1.ResellerService/CheckQuota"
+	ResellerService_CreateTenant_FullMethodName         = "/license.v1.ResellerService/CreateTenant"
+	ResellerService_ListTenants_FullMethodName          = "/license.v1.ResellerService/ListTenants"
 )
 
 // ResellerServiceClient is the client API for ResellerService service.
@@ -1771,6 +1813,10 @@ type ResellerServiceClient interface {
 	ListDeployments(ctx context.Context, in *ResellerListDeploymentsRequest, opts ...grpc.CallOption) (*ResellerListDeploymentsResponse, error)
 	// CheckQuota returns how many licenses a reseller has left under a product before the quota blocks new issues.
 	CheckQuota(ctx context.Context, in *ResellerCheckQuotaRequest, opts ...grpc.CallOption) (*ResellerCheckQuotaResponse, error)
+	// CreateTenant provisions a client tenant owned by the calling partner.
+	CreateTenant(ctx context.Context, in *ResellerCreateTenantRequest, opts ...grpc.CallOption) (*TenantResponse, error)
+	// ListTenants pages the client tenants served by the calling partner.
+	ListTenants(ctx context.Context, in *ResellerListTenantsRequest, opts ...grpc.CallOption) (*ResellerListTenantsResponse, error)
 }
 
 type resellerServiceClient struct {
@@ -1861,6 +1907,26 @@ func (c *resellerServiceClient) CheckQuota(ctx context.Context, in *ResellerChec
 	return out, nil
 }
 
+func (c *resellerServiceClient) CreateTenant(ctx context.Context, in *ResellerCreateTenantRequest, opts ...grpc.CallOption) (*TenantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TenantResponse)
+	err := c.cc.Invoke(ctx, ResellerService_CreateTenant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *resellerServiceClient) ListTenants(ctx context.Context, in *ResellerListTenantsRequest, opts ...grpc.CallOption) (*ResellerListTenantsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResellerListTenantsResponse)
+	err := c.cc.Invoke(ctx, ResellerService_ListTenants_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ResellerServiceServer is the server API for ResellerService service.
 // All implementations must embed UnimplementedResellerServiceServer
 // for forward compatibility.
@@ -1881,6 +1947,10 @@ type ResellerServiceServer interface {
 	ListDeployments(context.Context, *ResellerListDeploymentsRequest) (*ResellerListDeploymentsResponse, error)
 	// CheckQuota returns how many licenses a reseller has left under a product before the quota blocks new issues.
 	CheckQuota(context.Context, *ResellerCheckQuotaRequest) (*ResellerCheckQuotaResponse, error)
+	// CreateTenant provisions a client tenant owned by the calling partner.
+	CreateTenant(context.Context, *ResellerCreateTenantRequest) (*TenantResponse, error)
+	// ListTenants pages the client tenants served by the calling partner.
+	ListTenants(context.Context, *ResellerListTenantsRequest) (*ResellerListTenantsResponse, error)
 	mustEmbedUnimplementedResellerServiceServer()
 }
 
@@ -1914,6 +1984,12 @@ func (UnimplementedResellerServiceServer) ListDeployments(context.Context, *Rese
 }
 func (UnimplementedResellerServiceServer) CheckQuota(context.Context, *ResellerCheckQuotaRequest) (*ResellerCheckQuotaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckQuota not implemented")
+}
+func (UnimplementedResellerServiceServer) CreateTenant(context.Context, *ResellerCreateTenantRequest) (*TenantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateTenant not implemented")
+}
+func (UnimplementedResellerServiceServer) ListTenants(context.Context, *ResellerListTenantsRequest) (*ResellerListTenantsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListTenants not implemented")
 }
 func (UnimplementedResellerServiceServer) mustEmbedUnimplementedResellerServiceServer() {}
 func (UnimplementedResellerServiceServer) testEmbeddedByValue()                         {}
@@ -2080,6 +2156,42 @@ func _ResellerService_CheckQuota_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ResellerService_CreateTenant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResellerCreateTenantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResellerServiceServer).CreateTenant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResellerService_CreateTenant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResellerServiceServer).CreateTenant(ctx, req.(*ResellerCreateTenantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ResellerService_ListTenants_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResellerListTenantsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResellerServiceServer).ListTenants(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResellerService_ListTenants_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResellerServiceServer).ListTenants(ctx, req.(*ResellerListTenantsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ResellerService_ServiceDesc is the grpc.ServiceDesc for ResellerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2118,6 +2230,14 @@ var ResellerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CheckQuota",
 			Handler:    _ResellerService_CheckQuota_Handler,
+		},
+		{
+			MethodName: "CreateTenant",
+			Handler:    _ResellerService_CreateTenant_Handler,
+		},
+		{
+			MethodName: "ListTenants",
+			Handler:    _ResellerService_ListTenants_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
