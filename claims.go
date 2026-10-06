@@ -46,8 +46,10 @@ type LeaseClaims struct {
 
 // ModuleEntry is a module with optional limits inside a license.
 type ModuleEntry struct {
-	Code   string             `json:"code"`
-	Limits map[string]float64 `json:"limits,omitempty"`
+	Code        string             `json:"code"`
+	Limits      map[string]float64 `json:"limits,omitempty"`
+	Requires    []string           `json:"requires,omitempty"`
+	RequiresAny []string           `json:"requires_any,omitempty"`
 }
 
 // TenantEntry is per-tenant module assignment (multi-tenant).
