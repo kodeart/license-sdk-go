@@ -59,6 +59,22 @@ server's current keys (all of them) via `SetPublicKeys`, keyed by the JWS
 `GetSigningKeys` RPC (`/v1/license/signing-keys`). Retired keys keep
 validating old tokens until removed from the set.
 
+`LoadKeyRing` reads the whole `keys/` directory straight into that map, keyed
+by filename stem (`sk_2026_09.pub` → `kid "sk_2026_09"`), which is exactly how
+the signer names keys. Baking the directory into a binary works via `embed.FS`,
+so a consumer needs no key management code of its own:
+
+```go
+//go:embed keys/*.pub
+var keys embed.FS
+
+kr, err := license.LoadKeyRing(keys) // fs.FS: embed.FS or os.DirFS(...)
+license.SetPublicKeys(kr)
+```
+
+`LoadKeyRingFile(dir)` is the path-based form for a keyring on disk, and
+`LoadPublicKeyFile(path, kid)` reads a single raw 32-byte key.
+
 ```go
 keys := map[string]ed25519.PublicKey{
     "kid-active":  activePub,
@@ -70,6 +86,60 @@ license.SetPublicKeys(keys)
 
 Tokens without a `kid` header fall back to the default `license.PublicKey`
 set via `SetPublicKey`. `AddPublicKey(kid, pk)` adds a single key to the set.
+
+### Verifier (rotation-safe keys)
+
+`SetPublicKeys` and friends write to one process-wide key set, so rotating a
+key while another goroutine verifies is a data race. Use a `Verifier` for
+anything long-lived — it owns its keys behind a mutex and takes a copy, so a
+later change to your map cannot reach into it:
+
+```go
+v := license.NewVerifier(keys)
+claims, err := v.VerifyLicenseTokenWithConfig(token, license.VerifyConfig{
+    ExpectedAud: "my-product",
+})
+v.AddKey("kid-incoming", pub) // preload before the server rotates to it
+```
+
+A `Verifier` with a single default key (`SetDefaultKey`) resolves any `kid`,
+which keeps one-key deployments working; a key set with two or more entries is
+strict and rejects unknown `kid`s rather than checking a rotated token against
+the wrong key.
+
+### Consuming the license-agent
+
+App replicas on a licensed node don't talk to the license-server: they read the
+agent's local endpoint, which hands over the raw signed token. `FetchAgentStatus`
+gets it and `AgentStatus.Verify` decides, binding `dep` to the agent's own
+deployment id automatically:
+
+```go
+st, err := license.FetchAgentStatus("http://127.0.0.1:6100")
+claims, err := st.Verify(license.VerifyConfig{ExpectedAud: "my-product"})
+```
+
+`AgentStatus.Valid` is the agent's own opinion and is deliberately ignored by
+`Verify` — an agent with no public key of its own reports false while still
+handing over a perfectly good token.
+
+For licences with `require_online_lease`, use `VerifyOnline`. It additionally
+requires a live lease belonging to *this* licence, so a consumer enforces lease
+liveness itself rather than trusting the agent's verdict:
+
+```go
+claims, err := st.VerifyOnline(license.VerifyConfig{ExpectedAud: "my-product"})
+```
+
+`st.Verify` and `st.VerifyOnline` read the package-level default key set, which
+is what the agent and simple single-consumer tools want. A process holding its
+own keyring should own a `Verifier` and use its methods instead, which take the
+same arguments and verify against those keys:
+
+```go
+v := license.NewVerifier(ring)
+claims, err := v.VerifyAgentStatusOnline(*st, license.VerifyConfig{ExpectedAud: "my-product"})
+```
 
 `ParseLicenseToken`/`ParseLeaseToken` decode claims without verifying the
 signature and without enforcing time — use them to inspect a token before

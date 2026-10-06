@@ -26,7 +26,7 @@ func signJWS(t *testing.T, priv ed25519.PrivateKey, kid string, payload any) str
 
 func resetKeys() {
 	PublicKey = nil
-	keySet.keys = nil
+	SetPublicKeys(nil)
 }
 
 func TestVerifyLicenseToken_RoundTrip(t *testing.T) {

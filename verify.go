@@ -17,9 +17,13 @@ const PerpetualExpiryMS int64 = 253402300799999
 // a server with a slightly-advanced clock are not rejected by clients.
 const clockSkew = 30 * time.Second
 
-// KeySet is a collection of the server's Ed25519 public keys, keyed by the
-// JWS "kid" header they sign with. A key set supports additive key rotation:
-// retired keys keep validating old tokens until they are removed.
+// KeySet was the exported key collection before Verifier existed. It had an
+// unexported field and no exported methods, so it was never constructible or
+// readable from outside this package; it is kept only so existing declarations
+// still compile.
+//
+// Deprecated: use Verifier (NewVerifier with a LoadKeyRing result) instead. It
+// holds its keys behind a mutex, which the package-level SetPublicKeys cannot do.
 type KeySet struct {
 	keys map[string]ed25519.PublicKey
 }
@@ -27,56 +31,39 @@ type KeySet struct {
 // PublicKey is the server's default Ed25519 public key, used when a token
 // carries no "kid" header. Override it via SetPublicKey, or use SetPublicKeys
 // for multi-key rotation support.
+//
+// Deprecated: prefer a Verifier built with NewVerifier(keys) from LoadKeyRing.
+// The package-level functions below share one process-wide key set, so they
+// cannot be configured from two places without racing.
 var PublicKey ed25519.PublicKey
+
+// defaultVerifier backs the package-level functions, so the legacy PublicKey
+// variable and the kid-keyed set live in one store.
+var defaultVerifier = &Verifier{}
 
 // SetPublicKey installs a single default public key (kid ""), kept for
 // backward compatibility. Prefer SetPublicKeys/AddPublicKey for rotation.
 func SetPublicKey(pk ed25519.PublicKey) {
 	PublicKey = pk
+	defaultVerifier.SetDefaultKey(pk)
 }
 
 // SetPublicKeys installs a key set keyed by JWS "kid". The default key (kid
 // "") may be included for tokens without a kid header.
 func SetPublicKeys(keys map[string]ed25519.PublicKey) {
-	keySet.keys = make(map[string]ed25519.PublicKey, len(keys))
-	for kid, pk := range keys {
-		keySet.keys[kid] = pk
-	}
+	defaultVerifier.SetKeys(keys)
 }
 
 // AddPublicKey adds or replaces a single key in the key set. Use it to preload
 // a new key ahead of server-side rotation so existing tokens keep validating.
 func AddPublicKey(kid string, pk ed25519.PublicKey) {
-	if keySet.keys == nil {
-		keySet.keys = make(map[string]ed25519.PublicKey)
-	}
-	keySet.keys[kid] = pk
+	defaultVerifier.AddKey(kid, pk)
 }
 
-// keySet holds the multi-key set. The legacy PublicKey variable remains the
-// source of truth for the default key so existing SetPublicKey callers work.
-var keySet = KeySet{}
-
-// lookupKey resolves the public key for a JWS kid header.
-//
-//   - If a kid is present and registered in the KeySet, that key is used.
-//   - A legacy single key set via SetPublicKey is the fallback for any kid:
-//     SetPublicKey(pk) means "this one key verifies everything it signs", so a
-//     token signed by the default key verifies regardless of its kid. This keeps
-//     existing single-key callers working after the server starts stamping kid.
-//   - Strict multi-key sets (SetPublicKeys/AddPublicKey) reject unknown kids so
-//     a rotated token is never checked against the wrong key.
+// lookupKey resolves the public key for a JWS kid header against the
+// package-level key set. See Verifier.lookup for the resolution rules.
 func lookupKey(kid string) (ed25519.PublicKey, error) {
-	if kid != "" && len(keySet.keys) > 0 {
-		if pk, ok := keySet.keys[kid]; ok {
-			return pk, nil
-		}
-		return nil, fmt.Errorf("license sdk: unknown key id %q", kid)
-	}
-	if len(PublicKey) == ed25519.PublicKeySize {
-		return PublicKey, nil
-	}
-	return nil, fmt.Errorf("license sdk: public key not set; call SetPublicKey or SetPublicKeys")
+	return defaultVerifier.lookup(kid)
 }
 
 // VerifyLicenseToken verifies the Ed25519 signature of a license token, checks
@@ -122,16 +109,25 @@ func VerifyLicenseTokenWithConfigAt(token string, cfg VerifyConfig, now time.Tim
 	if err := checkTime(claims.EXP, claims.NBF, now); err != nil {
 		return nil, err
 	}
-	if cfg.ExpectedAud != "" && claims.Aud != cfg.ExpectedAud {
-		return nil, fmt.Errorf("license sdk: token aud %q does not match expected %q", claims.Aud, cfg.ExpectedAud)
-	}
-	if cfg.ExpectedDep != "" && claims.Dep != cfg.ExpectedDep {
-		return nil, fmt.Errorf("license sdk: token dep %q does not match expected %q", claims.Dep, cfg.ExpectedDep)
-	}
-	if cfg.ExpectedIssuer != "" && claims.ISS != cfg.ExpectedIssuer {
-		return nil, fmt.Errorf("license sdk: token iss %q does not match expected %q", claims.ISS, cfg.ExpectedIssuer)
+	if err := checkBinding(claims.Aud, claims.Dep, claims.ISS, cfg); err != nil {
+		return nil, err
 	}
 	return claims, nil
+}
+
+// checkBinding enforces the VerifyConfig binding fields that are set. A zero
+// field skips its check, so callers bind only what they actually know.
+func checkBinding(aud, dep, iss string, cfg VerifyConfig) error {
+	if cfg.ExpectedAud != "" && aud != cfg.ExpectedAud {
+		return fmt.Errorf("license sdk: token aud %q does not match expected %q", aud, cfg.ExpectedAud)
+	}
+	if cfg.ExpectedDep != "" && dep != cfg.ExpectedDep {
+		return fmt.Errorf("license sdk: token dep %q does not match expected %q", dep, cfg.ExpectedDep)
+	}
+	if cfg.ExpectedIssuer != "" && iss != cfg.ExpectedIssuer {
+		return fmt.Errorf("license sdk: token iss %q does not match expected %q", iss, cfg.ExpectedIssuer)
+	}
+	return nil
 }
 
 // VerifyLeaseToken verifies the Ed25519 signature of a lease token and that it
@@ -220,32 +216,11 @@ func ParseLeaseToken(token string) (*LeaseClaims, error) {
 }
 
 // verifyToken verifies the signature and returns the claims, without time
-// enforcement (callers apply it via checkTime).
+// enforcement (callers apply it via checkTime). It resolves keys from the
+// package-level key set; use a Verifier's method when concurrent rotation
+// matters.
 func verifyToken[T any](token string) (*T, error) {
-	header, payload, sig, err := splitJWS(token)
-	if err != nil {
-		return nil, err
-	}
-	pk, err := lookupKey(jwsKid(header))
-	if err != nil {
-		return nil, err
-	}
-	sigBytes, err := base64.RawURLEncoding.DecodeString(sig)
-	if err != nil {
-		return nil, fmt.Errorf("license sdk: decode signature: %w", err)
-	}
-	if !ed25519.Verify(pk, []byte(header+"."+payload), sigBytes) {
-		return nil, fmt.Errorf("license sdk: invalid signature")
-	}
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(payload)
-	if err != nil {
-		return nil, fmt.Errorf("license sdk: decode payload: %w", err)
-	}
-	var claims T
-	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
-		return nil, fmt.Errorf("license sdk: parse claims: %w", err)
-	}
-	return &claims, nil
+	return defaultVerifier.verifyToken[T](token)
 }
 
 // jwsKid extracts the "kid" header value from a base64url-encoded JWS header.
