@@ -3775,27 +3775,28 @@ func (x *GetLicenseRequest) GetLicenseId() string {
 }
 
 type GetLicenseResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Jti            string                 `protobuf:"bytes,2,opt,name=jti,proto3" json:"jti,omitempty"`
-	ProductId      string                 `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	TenantId       string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	DeploymentId   string                 `protobuf:"bytes,5,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
-	Edition        string                 `protobuf:"bytes,6,opt,name=edition,proto3" json:"edition,omitempty"`
-	Type           string                 `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
-	LicensingModel string                 `protobuf:"bytes,8,opt,name=licensing_model,json=licensingModel,proto3" json:"licensing_model,omitempty"`
-	ValidFrom      int64                  `protobuf:"varint,9,opt,name=valid_from,json=validFrom,proto3" json:"valid_from,omitempty"`
-	ValidTo        int64                  `protobuf:"varint,10,opt,name=valid_to,json=validTo,proto3" json:"valid_to,omitempty"`
-	Seats          int32                  `protobuf:"varint,11,opt,name=seats,proto3" json:"seats,omitempty"`
-	CurrentVersion int32                  `protobuf:"varint,12,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
-	Status         string                 `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
-	CreatedAt      int64                  `protobuf:"varint,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt      int64                  `protobuf:"varint,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Modules        []*ModuleEntry         `protobuf:"bytes,16,rep,name=modules,proto3" json:"modules,omitempty"`
-	MaxDeployments int32                  `protobuf:"varint,17,opt,name=max_deployments,json=maxDeployments,proto3" json:"max_deployments,omitempty"`
-	ProductCode    string                 `protobuf:"bytes,18,opt,name=product_code,json=productCode,proto3" json:"product_code,omitempty"` // joined products.code, so list tables show a readable product
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Jti             string                 `protobuf:"bytes,2,opt,name=jti,proto3" json:"jti,omitempty"`
+	ProductId       string                 `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	TenantId        string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	DeploymentId    string                 `protobuf:"bytes,5,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
+	Edition         string                 `protobuf:"bytes,6,opt,name=edition,proto3" json:"edition,omitempty"`
+	Type            string                 `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
+	LicensingModel  string                 `protobuf:"bytes,8,opt,name=licensing_model,json=licensingModel,proto3" json:"licensing_model,omitempty"`
+	ValidFrom       int64                  `protobuf:"varint,9,opt,name=valid_from,json=validFrom,proto3" json:"valid_from,omitempty"`
+	ValidTo         int64                  `protobuf:"varint,10,opt,name=valid_to,json=validTo,proto3" json:"valid_to,omitempty"`
+	Seats           int32                  `protobuf:"varint,11,opt,name=seats,proto3" json:"seats,omitempty"`
+	CurrentVersion  int32                  `protobuf:"varint,12,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
+	Status          string                 `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt       int64                  `protobuf:"varint,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       int64                  `protobuf:"varint,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Modules         []*ModuleEntry         `protobuf:"bytes,16,rep,name=modules,proto3" json:"modules,omitempty"`
+	MaxDeployments  int32                  `protobuf:"varint,17,opt,name=max_deployments,json=maxDeployments,proto3" json:"max_deployments,omitempty"`
+	ProductCode     string                 `protobuf:"bytes,18,opt,name=product_code,json=productCode,proto3" json:"product_code,omitempty"`              // joined products.code, so list tables show a readable product
+	DeploymentCount int32                  `protobuf:"varint,19,opt,name=deployment_count,json=deploymentCount,proto3" json:"deployment_count,omitempty"` // number of deployments linked to this license
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *GetLicenseResponse) Reset() {
@@ -3952,6 +3953,13 @@ func (x *GetLicenseResponse) GetProductCode() string {
 		return x.ProductCode
 	}
 	return ""
+}
+
+func (x *GetLicenseResponse) GetDeploymentCount() int32 {
+	if x != nil {
+		return x.DeploymentCount
+	}
+	return 0
 }
 
 type ListLicensesRequest struct {
@@ -8668,7 +8676,7 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x06status\x18\x05 \x01(\tR\x06status\"2\n" +
 	"\x11GetLicenseRequest\x12\x1d\n" +
 	"\n" +
-	"license_id\x18\x01 \x01(\tR\tlicenseId\"\xbc\x04\n" +
+	"license_id\x18\x01 \x01(\tR\tlicenseId\"\xe7\x04\n" +
 	"\x12GetLicenseResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03jti\x18\x02 \x01(\tR\x03jti\x12\x1d\n" +
@@ -8692,7 +8700,8 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"updated_at\x18\x0f \x01(\x03R\tupdatedAt\x121\n" +
 	"\amodules\x18\x10 \x03(\v2\x17.license.v1.ModuleEntryR\amodules\x12'\n" +
 	"\x0fmax_deployments\x18\x11 \x01(\x05R\x0emaxDeployments\x12!\n" +
-	"\fproduct_code\x18\x12 \x01(\tR\vproductCode\"\xda\x01\n" +
+	"\fproduct_code\x18\x12 \x01(\tR\vproductCode\x12)\n" +
+	"\x10deployment_count\x18\x13 \x01(\x05R\x0fdeploymentCount\"\xda\x01\n" +
 	"\x13ListLicensesRequest\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
