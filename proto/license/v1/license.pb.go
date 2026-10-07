@@ -3794,7 +3794,7 @@ type GetLicenseResponse struct {
 	Modules         []*ModuleEntry         `protobuf:"bytes,16,rep,name=modules,proto3" json:"modules,omitempty"`
 	MaxDeployments  int32                  `protobuf:"varint,17,opt,name=max_deployments,json=maxDeployments,proto3" json:"max_deployments,omitempty"`
 	ProductCode     string                 `protobuf:"bytes,18,opt,name=product_code,json=productCode,proto3" json:"product_code,omitempty"`              // joined products.code, so list tables show a readable product
-	DeploymentCount int32                  `protobuf:"varint,19,opt,name=deployment_count,json=deploymentCount,proto3" json:"deployment_count,omitempty"` // number of deployments linked to this license
+	DeploymentCount int32                  `protobuf:"varint,19,opt,name=deployment_count,json=deploymentCount,proto3" json:"deployment_count,omitempty"` // active deployments linked to this license, comparable with max_deployments
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
