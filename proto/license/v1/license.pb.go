@@ -74,12 +74,17 @@ func (*Empty) Descriptor() ([]byte, []int) {
 // it is not part of any RPC, the grpc-gateway renders problem documents
 // directly (cmd/server/gw_error.go).
 type Problem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`         // A URI reference identifying the problem type, anchored at the gateway issuer (e.g. https://license.example.com/problems/not-found).
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`       // A short, human-readable summary of the problem type (the HTTP reason phrase).
-	Status        int32                  `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`    // The HTTP status code generated for this occurrence of the problem.
-	Detail        string                 `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`     // A human-readable explanation specific to this occurrence of the problem.
-	Instance      string                 `protobuf:"bytes,5,opt,name=instance,proto3" json:"instance,omitempty"` // A URI reference identifying the specific occurrence of the problem (the request path).
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// A URI reference identifying the problem type, anchored at the gateway issuer (e.g. https://license.example.com/problems/not-found).
+	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	// A short, human-readable summary of the problem type (the HTTP reason phrase).
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// The HTTP status code generated for this occurrence of the problem.
+	Status int32 `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`
+	// A human-readable explanation specific to this occurrence of the problem.
+	Detail string `protobuf:"bytes,4,opt,name=detail,proto3" json:"detail,omitempty"`
+	// A URI reference identifying the specific occurrence of the problem (the request path).
+	Instance      string `protobuf:"bytes,5,opt,name=instance,proto3" json:"instance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -150,9 +155,10 @@ func (x *Problem) GetInstance() string {
 }
 
 type ModuleEntry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	Limits        map[string]float64     `protobuf:"bytes,2,rep,name=limits,proto3" json:"limits,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"` // JSON-style limits, e.g. {"users": 50, "storage_gb": 10}
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Code  string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// JSON-style limits, e.g. {"users": 50, "storage_gb": 10}.
+	Limits        map[string]float64 `protobuf:"bytes,2,rep,name=limits,proto3" json:"limits,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -337,6 +343,8 @@ func (x *UsageMetric) GetTenantId() string {
 	return ""
 }
 
+// Keeps a deployment's license or lease alive and returns a fresh lease token.
+// The deployment id comes from the x-deployment-api-key credential.
 type HeartbeatRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LicenseToken  string                 `protobuf:"bytes,1,opt,name=license_token,json=licenseToken,proto3" json:"license_token,omitempty"`
@@ -513,6 +521,8 @@ func (x *HeartbeatResponse) GetWarning() string {
 	return ""
 }
 
+// Certificate-revocation-list delta request: only entries changed after the given
+// sequence id are returned.
 type GetCRLRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	SinceSequenceId int64                  `protobuf:"varint,1,opt,name=since_sequence_id,json=sinceSequenceId,proto3" json:"since_sequence_id,omitempty"`
@@ -617,6 +627,8 @@ func (x *GetCRLResponse) GetNextSequenceId() int64 {
 	return 0
 }
 
+// Hourly usage metrics for a deployment. The deployment id comes from the
+// x-deployment-api-key credential and only falls back to this field.
 type ReportUsageRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DeploymentId  string                 `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
@@ -713,6 +725,8 @@ func (x *ReportUsageResponse) GetAccepted() int32 {
 	return 0
 }
 
+// Signed license tokens bound to a deployment. The deployment id comes from
+// the x-deployment-api-key credential.
 type FetchLicenseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DeploymentId  string                 `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
@@ -1007,11 +1021,13 @@ func (x *ActivateResponse) GetRefreshInterval() int64 {
 	return 0
 }
 
+// Registers a platform-managed tenant.
 type CreateTenantRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Name       string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	RegionCode string                 `protobuf:"bytes,2,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"`
-	UserId     string                 `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"` // identity service user (JWT sub) linked to this tenant portal
+	// identity service user (JWT sub) linked to this tenant portal.
+	UserId string `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	// Partner that serves this tenant (single ownership). Omit or leave empty
 	// for a platform/direct-managed tenant.
 	ResellerId    string `protobuf:"bytes,4,opt,name=reseller_id,json=resellerId,proto3" json:"reseller_id,omitempty"`
@@ -1078,8 +1094,9 @@ func (x *CreateTenantRequest) GetResellerId() string {
 }
 
 type GetTenantRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant id (hex UUID) taken from the path.
+	TenantId      string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1122,13 +1139,19 @@ func (x *GetTenantRequest) GetTenantId() string {
 }
 
 type ListTenantsRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	Status     string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	RegionCode string                 `protobuf:"bytes,2,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"`
-	Page       int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit      int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy     string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order      string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	// Empty means any region.
+	RegionCode string `protobuf:"bytes,2,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "name", "status", "regionCode", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -1229,11 +1252,15 @@ type ListTenantsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Legacy list field: the same rows as entries. Kept for existing clients
 	// while they migrate to the paged envelope below.
-	Tenants       []*TenantResponse `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
-	Total         int32             `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"` // rows matching the filter, across all pages
-	Page          int32             `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32             `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*TenantResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"` // the requested page
+	Tenants []*TenantResponse `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*TenantResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1303,11 +1330,14 @@ func (x *ListTenantsResponse) GetEntries() []*TenantResponse {
 	return nil
 }
 
+// Partial update: omitted fields are left alone; user_id and reseller_id also
+// accept an empty string to unlink.
 type UpdateTenantRequest struct {
-	state    protoimpl.MessageState `protogen:"open.v1"`
-	TenantId string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	Name     string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Status   string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Tenant id (hex UUID) taken from the path.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	Name     string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status   string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
 	// Identity service user UUID (the JWT sub) that owns this tenant's portal
 	// login. Omit to leave the current linkage alone; send an empty string to
 	// unlink. Must be a UUID or empty — an email is rejected, because the
@@ -1491,6 +1521,7 @@ func (x *TenantResponse) GetResellerId() string {
 	return ""
 }
 
+// Registers a partner (reseller).
 type CreateResellerRequest struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Name       string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1554,11 +1585,13 @@ func (x *CreateResellerRequest) GetUserId() string {
 	return ""
 }
 
+// Partial update: omitted fields are left alone.
 type UpdateResellerRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	ResellerId string                 `protobuf:"bytes,1,opt,name=reseller_id,json=resellerId,proto3" json:"reseller_id,omitempty"`
-	Name       string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Status     string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Partner id (hex UUID) taken from the path.
+	ResellerId string `protobuf:"bytes,1,opt,name=reseller_id,json=resellerId,proto3" json:"reseller_id,omitempty"`
+	Name       string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status     string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
 	// Omit to leave the current linkage alone; send an empty string to unlink.
 	UserId        *string `protobuf:"bytes,4,opt,name=user_id,json=userId,proto3,oneof" json:"user_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1716,13 +1749,19 @@ func (x *ResellerResponse) GetUpdatedAt() int64 {
 }
 
 type ListResellersRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	Status     string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                           // empty means any status
-	RegionCode string                 `protobuf:"bytes,2,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"` // empty means any region
-	Page       int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit      int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy     string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"` // name | status | regionCode | createdAt | updatedAt
-	Order      string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`                 // "asc" or "desc"; empty defaults to desc
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	// Empty means any region.
+	RegionCode string `protobuf:"bytes,2,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "name", "status", "regionCode", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over the partner name. Substring, case-insensitive;
 	// ANDed with the filters above.
 	Search        string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -1813,11 +1852,15 @@ type ListResellersResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Legacy list field: the same rows as entries. Kept for existing clients
 	// while they migrate to the paged envelope below.
-	Resellers     []*ResellerResponse `protobuf:"bytes,1,rep,name=resellers,proto3" json:"resellers,omitempty"`
-	Total         int32               `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"` // rows matching the filter, across all pages
-	Page          int32               `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32               `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*ResellerResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"` // the requested page
+	Resellers []*ResellerResponse `protobuf:"bytes,1,rep,name=resellers,proto3" json:"resellers,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*ResellerResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1887,6 +1930,8 @@ func (x *ListResellersResponse) GetEntries() []*ResellerResponse {
 	return nil
 }
 
+// Grants or re-grants one reseller quota. Granting is idempotent per
+// (reseller, product, type): an existing entry is updated and its usage counter reset.
 type CreateResellerQuotaRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Reseller to grant the quota to (path parameter).
@@ -2014,9 +2059,11 @@ func (x *ListResellerQuotasRequest) GetResellerId() string {
 }
 
 type ListResellerQuotasResponse struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Quotas        []*ResellerQuotaResponse `protobuf:"bytes,1,rep,name=quotas,proto3" json:"quotas,omitempty"`
-	Total         int32                    `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The reseller's configured quotas. Unpaged: this list returns no envelope.
+	Quotas []*ResellerQuotaResponse `protobuf:"bytes,1,rep,name=quotas,proto3" json:"quotas,omitempty"`
+	// Number of quotas returned.
+	Total         int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2157,6 +2204,7 @@ func (x *ResellerQuotaResponse) GetResetAt() int64 {
 	return 0
 }
 
+// Registers a product that licenses can be issued for.
 type CreateProductRequest struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	Code                  string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
@@ -2266,8 +2314,9 @@ func (x *CreateProductRequest) GetTelemetryEnabled() bool {
 }
 
 type GetProductRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product id (hex UUID) taken from the path.
+	ProductId     string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2310,12 +2359,17 @@ func (x *GetProductRequest) GetProductId() string {
 }
 
 type ListProductsRequest struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Status string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	Page   int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
-	Limit  int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy string                 `protobuf:"bytes,4,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order  string                 `protobuf:"bytes,5,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "code", "name", "status", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,4,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,5,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,6,opt,name=search,proto3" json:"search,omitempty"`
@@ -2396,12 +2450,17 @@ func (x *ListProductsRequest) GetSearch() string {
 }
 
 type ListProductsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Products      []*ProductResponse     `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"` // legacy: same rows as entries
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*ProductResponse     `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	Products []*ProductResponse `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*ProductResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2471,16 +2530,18 @@ func (x *ListProductsResponse) GetEntries() []*ProductResponse {
 	return nil
 }
 
+// Partial update: omitted fields are left alone.
 type UpdateProductRequest struct {
-	state                 protoimpl.MessageState `protogen:"open.v1"`
-	ProductId             string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Name                  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Status                string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	DefaultLeaseSeconds   *int32                 `protobuf:"varint,4,opt,name=default_lease_seconds,json=defaultLeaseSeconds,proto3,oneof" json:"default_lease_seconds,omitempty"`
-	DefaultRefreshSeconds *int32                 `protobuf:"varint,5,opt,name=default_refresh_seconds,json=defaultRefreshSeconds,proto3,oneof" json:"default_refresh_seconds,omitempty"`
-	DefaultGraceSeconds   *int32                 `protobuf:"varint,6,opt,name=default_grace_seconds,json=defaultGraceSeconds,proto3,oneof" json:"default_grace_seconds,omitempty"`
-	RequireOnlineLease    *bool                  `protobuf:"varint,7,opt,name=require_online_lease,json=requireOnlineLease,proto3,oneof" json:"require_online_lease,omitempty"`
-	TelemetryEnabled      *bool                  `protobuf:"varint,8,opt,name=telemetry_enabled,json=telemetryEnabled,proto3,oneof" json:"telemetry_enabled,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product id (hex UUID) taken from the path.
+	ProductId             string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	Name                  string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status                string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	DefaultLeaseSeconds   *int32 `protobuf:"varint,4,opt,name=default_lease_seconds,json=defaultLeaseSeconds,proto3,oneof" json:"default_lease_seconds,omitempty"`
+	DefaultRefreshSeconds *int32 `protobuf:"varint,5,opt,name=default_refresh_seconds,json=defaultRefreshSeconds,proto3,oneof" json:"default_refresh_seconds,omitempty"`
+	DefaultGraceSeconds   *int32 `protobuf:"varint,6,opt,name=default_grace_seconds,json=defaultGraceSeconds,proto3,oneof" json:"default_grace_seconds,omitempty"`
+	RequireOnlineLease    *bool  `protobuf:"varint,7,opt,name=require_online_lease,json=requireOnlineLease,proto3,oneof" json:"require_online_lease,omitempty"`
+	TelemetryEnabled      *bool  `protobuf:"varint,8,opt,name=telemetry_enabled,json=telemetryEnabled,proto3,oneof" json:"telemetry_enabled,omitempty"`
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -2711,10 +2772,13 @@ func (x *ProductResponse) GetUpdatedAt() int64 {
 	return 0
 }
 
+// Replaces the product's module catalog and re-validates every module's
+// dependency graph against it.
 type UpsertProductModulesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Modules       []*ProductModuleInput  `protobuf:"bytes,2,rep,name=modules,proto3" json:"modules,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product id (hex UUID) taken from the path.
+	ProductId     string                `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	Modules       []*ProductModuleInput `protobuf:"bytes,2,rep,name=modules,proto3" json:"modules,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2932,8 +2996,9 @@ func (x *UpsertProductModulesResponse) GetUpsertedCount() int32 {
 }
 
 type GetProductModuleCatalogRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product id (hex UUID) taken from the path.
+	ProductId     string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3020,19 +3085,21 @@ func (x *GetProductModuleCatalogResponse) GetModules() []*ProductModuleResponse 
 }
 
 type ProductModuleResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
-	Name          string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	IsMandatory   bool                   `protobuf:"varint,5,opt,name=is_mandatory,json=isMandatory,proto3" json:"is_mandatory,omitempty"`
-	IsRequired    bool                   `protobuf:"varint,6,opt,name=is_required,json=isRequired,proto3" json:"is_required,omitempty"`
-	Requires      string                 `protobuf:"bytes,7,opt,name=requires,proto3" json:"requires,omitempty"`                          // JSON-encoded array
-	RequiresAny   string                 `protobuf:"bytes,8,opt,name=requires_any,json=requiresAny,proto3" json:"requires_any,omitempty"` // JSON-encoded array
-	LimitsSchema  string                 `protobuf:"bytes,9,opt,name=limits_schema,json=limitsSchema,proto3" json:"limits_schema,omitempty"`
-	RegionCode    string                 `protobuf:"bytes,10,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"`
-	SortOrder     int32                  `protobuf:"varint,11,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
-	Status        string                 `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Code        string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Name        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	Description string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	IsMandatory bool                   `protobuf:"varint,5,opt,name=is_mandatory,json=isMandatory,proto3" json:"is_mandatory,omitempty"`
+	IsRequired  bool                   `protobuf:"varint,6,opt,name=is_required,json=isRequired,proto3" json:"is_required,omitempty"`
+	// JSON-encoded array of module codes this module depends on.
+	Requires string `protobuf:"bytes,7,opt,name=requires,proto3" json:"requires,omitempty"`
+	// JSON-encoded array: at least one of these codes must be included.
+	RequiresAny   string `protobuf:"bytes,8,opt,name=requires_any,json=requiresAny,proto3" json:"requires_any,omitempty"`
+	LimitsSchema  string `protobuf:"bytes,9,opt,name=limits_schema,json=limitsSchema,proto3" json:"limits_schema,omitempty"`
+	RegionCode    string `protobuf:"bytes,10,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"`
+	SortOrder     int32  `protobuf:"varint,11,opt,name=sort_order,json=sortOrder,proto3" json:"sort_order,omitempty"`
+	Status        string `protobuf:"bytes,12,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3151,6 +3218,7 @@ func (x *ProductModuleResponse) GetStatus() string {
 	return ""
 }
 
+// Issues a new license under a product and returns the signed token.
 type IssueLicenseRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	TenantId       string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -3276,11 +3344,12 @@ func (x *IssueLicenseRequest) GetMaxDeployments() int32 {
 }
 
 type IssueLicenseResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
-	LicenseJti    string                 `protobuf:"bytes,2,opt,name=license_jti,json=licenseJti,proto3" json:"license_jti,omitempty"`
-	Version       int32                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
-	CodeRaw       string                 `protobuf:"bytes,4,opt,name=code_raw,json=codeRaw,proto3" json:"code_raw,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	LicenseId  string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	LicenseJti string                 `protobuf:"bytes,2,opt,name=license_jti,json=licenseJti,proto3" json:"license_jti,omitempty"`
+	Version    int32                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	// Raw activation code, shown only once. Empty unless the license was issued with an activation code.
+	CodeRaw       string `protobuf:"bytes,4,opt,name=code_raw,json=codeRaw,proto3" json:"code_raw,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3343,14 +3412,17 @@ func (x *IssueLicenseResponse) GetCodeRaw() string {
 	return ""
 }
 
+// Mints a new JTI for an active license and adjusts seats, max deployments or
+// expiry. The new token supersedes every previously issued one.
 type ReissueLicenseRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId      string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
-	Seats          *int32                 `protobuf:"varint,2,opt,name=seats,proto3,oneof" json:"seats,omitempty"`
-	Modules        []*ModuleEntry         `protobuf:"bytes,3,rep,name=modules,proto3" json:"modules,omitempty"`
-	ValidTo        *int64                 `protobuf:"varint,4,opt,name=valid_to,json=validTo,proto3,oneof" json:"valid_to,omitempty"`
-	Reason         string                 `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
-	MaxDeployments *int32                 `protobuf:"varint,6,opt,name=max_deployments,json=maxDeployments,proto3,oneof" json:"max_deployments,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId      string         `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	Seats          *int32         `protobuf:"varint,2,opt,name=seats,proto3,oneof" json:"seats,omitempty"`
+	Modules        []*ModuleEntry `protobuf:"bytes,3,rep,name=modules,proto3" json:"modules,omitempty"`
+	ValidTo        *int64         `protobuf:"varint,4,opt,name=valid_to,json=validTo,proto3,oneof" json:"valid_to,omitempty"`
+	Reason         string         `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	MaxDeployments *int32         `protobuf:"varint,6,opt,name=max_deployments,json=maxDeployments,proto3,oneof" json:"max_deployments,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -3487,10 +3559,14 @@ func (x *ReissueLicenseResponse) GetUpdatedLicenseToken() string {
 	return ""
 }
 
+// Terminates a license immediately; the CRL entry revokes outstanding tokens
+// and active leases.
 type RevokeLicenseRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
-	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	// Audit reason. Empty defaults to "admin_revoked".
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3591,9 +3667,12 @@ func (x *RevokeLicenseResponse) GetStatus() string {
 	return ""
 }
 
+// Lifts a suspended license back to active and mints a fresh token. A revoked
+// license is terminal; a lapsed one needs a new valid_to.
 type ResumeLicenseRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
 	// Reason is required (audit trail).
 	Reason string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	// New expiry (epoch ms). Required when the license's validity has lapsed:
@@ -3731,8 +3810,9 @@ func (x *ResumeLicenseResponse) GetStatus() string {
 }
 
 type GetLicenseRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId     string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3775,26 +3855,28 @@ func (x *GetLicenseRequest) GetLicenseId() string {
 }
 
 type GetLicenseResponse struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Jti             string                 `protobuf:"bytes,2,opt,name=jti,proto3" json:"jti,omitempty"`
-	ProductId       string                 `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	TenantId        string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	DeploymentId    string                 `protobuf:"bytes,5,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
-	Edition         string                 `protobuf:"bytes,6,opt,name=edition,proto3" json:"edition,omitempty"`
-	Type            string                 `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
-	LicensingModel  string                 `protobuf:"bytes,8,opt,name=licensing_model,json=licensingModel,proto3" json:"licensing_model,omitempty"`
-	ValidFrom       int64                  `protobuf:"varint,9,opt,name=valid_from,json=validFrom,proto3" json:"valid_from,omitempty"`
-	ValidTo         int64                  `protobuf:"varint,10,opt,name=valid_to,json=validTo,proto3" json:"valid_to,omitempty"`
-	Seats           int32                  `protobuf:"varint,11,opt,name=seats,proto3" json:"seats,omitempty"`
-	CurrentVersion  int32                  `protobuf:"varint,12,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
-	Status          string                 `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
-	CreatedAt       int64                  `protobuf:"varint,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt       int64                  `protobuf:"varint,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	Modules         []*ModuleEntry         `protobuf:"bytes,16,rep,name=modules,proto3" json:"modules,omitempty"`
-	MaxDeployments  int32                  `protobuf:"varint,17,opt,name=max_deployments,json=maxDeployments,proto3" json:"max_deployments,omitempty"`
-	ProductCode     string                 `protobuf:"bytes,18,opt,name=product_code,json=productCode,proto3" json:"product_code,omitempty"`              // joined products.code, so list tables show a readable product
-	DeploymentCount int32                  `protobuf:"varint,19,opt,name=deployment_count,json=deploymentCount,proto3" json:"deployment_count,omitempty"` // active deployments linked to this license, comparable with max_deployments
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Jti            string                 `protobuf:"bytes,2,opt,name=jti,proto3" json:"jti,omitempty"`
+	ProductId      string                 `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	TenantId       string                 `protobuf:"bytes,4,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	DeploymentId   string                 `protobuf:"bytes,5,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
+	Edition        string                 `protobuf:"bytes,6,opt,name=edition,proto3" json:"edition,omitempty"`
+	Type           string                 `protobuf:"bytes,7,opt,name=type,proto3" json:"type,omitempty"`
+	LicensingModel string                 `protobuf:"bytes,8,opt,name=licensing_model,json=licensingModel,proto3" json:"licensing_model,omitempty"`
+	ValidFrom      int64                  `protobuf:"varint,9,opt,name=valid_from,json=validFrom,proto3" json:"valid_from,omitempty"`
+	ValidTo        int64                  `protobuf:"varint,10,opt,name=valid_to,json=validTo,proto3" json:"valid_to,omitempty"`
+	Seats          int32                  `protobuf:"varint,11,opt,name=seats,proto3" json:"seats,omitempty"`
+	CurrentVersion int32                  `protobuf:"varint,12,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
+	Status         string                 `protobuf:"bytes,13,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt      int64                  `protobuf:"varint,14,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt      int64                  `protobuf:"varint,15,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Modules        []*ModuleEntry         `protobuf:"bytes,16,rep,name=modules,proto3" json:"modules,omitempty"`
+	MaxDeployments int32                  `protobuf:"varint,17,opt,name=max_deployments,json=maxDeployments,proto3" json:"max_deployments,omitempty"`
+	// Joined products.code, so list tables show a readable product.
+	ProductCode string `protobuf:"bytes,18,opt,name=product_code,json=productCode,proto3" json:"product_code,omitempty"`
+	// Active deployments linked to this license, comparable with max_deployments.
+	DeploymentCount int32 `protobuf:"varint,19,opt,name=deployment_count,json=deploymentCount,proto3" json:"deployment_count,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -3963,14 +4045,21 @@ func (x *GetLicenseResponse) GetDeploymentCount() int32 {
 }
 
 type ListLicensesRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	ProductId string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Status    string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	Page      int32                  `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,7,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only rows for this tenant. Omit or leave empty for all tenants.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Only rows for this product. Omit or leave empty for all products.
+	ProductId string `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "jti", "status", "type", "edition", "seats", "validFrom", "validTo", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,7,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,8,opt,name=search,proto3" json:"search,omitempty"`
@@ -4065,12 +4154,17 @@ func (x *ListLicensesRequest) GetSearch() string {
 }
 
 type ListLicensesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Licenses      []*GetLicenseResponse  `protobuf:"bytes,1,rep,name=licenses,proto3" json:"licenses,omitempty"` // legacy: same rows as entries
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*GetLicenseResponse  `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	Licenses []*GetLicenseResponse `protobuf:"bytes,1,rep,name=licenses,proto3" json:"licenses,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*GetLicenseResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4141,8 +4235,9 @@ func (x *ListLicensesResponse) GetEntries() []*GetLicenseResponse {
 }
 
 type GetLicenseVersionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId     string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4305,14 +4400,21 @@ func (x *LicenseVersionResponse) GetCreatedAt() int64 {
 }
 
 type ListDeploymentsRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	TenantId  string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
-	ProductId string                 `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Status    string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	Page      int32                  `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,7,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only rows for this tenant. Omit or leave empty for all tenants.
+	TenantId string `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
+	// Only rows for this product. Omit or leave empty for all products.
+	ProductId string `protobuf:"bytes,2,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,5,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "fingerprint", "status", "regionCode", "lastHeartbeatAt", "firstHeartbeatAt", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,6,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,7,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,8,opt,name=search,proto3" json:"search,omitempty"`
@@ -4407,12 +4509,17 @@ func (x *ListDeploymentsRequest) GetSearch() string {
 }
 
 type ListDeploymentsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Deployments   []*DeploymentResponse  `protobuf:"bytes,1,rep,name=deployments,proto3" json:"deployments,omitempty"` // legacy: same rows as entries
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*DeploymentResponse  `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	Deployments []*DeploymentResponse `protobuf:"bytes,1,rep,name=deployments,proto3" json:"deployments,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*DeploymentResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4483,8 +4590,9 @@ func (x *ListDeploymentsResponse) GetEntries() []*DeploymentResponse {
 }
 
 type GetDeploymentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DeploymentId  string                 `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Deployment id (hex UUID) taken from the path.
+	DeploymentId  string `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4635,6 +4743,7 @@ func (x *DeploymentResponse) GetProductCode() string {
 	return ""
 }
 
+// Issues an activation code for a license; the raw code is shown once.
 type CreateActivationCodeRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	LicenseId       string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
@@ -4710,10 +4819,11 @@ type ActivationCodeResponse struct {
 	Status          string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
 	RedeemsAllowed  int32                  `protobuf:"varint,4,opt,name=redeems_allowed,json=redeemsAllowed,proto3" json:"redeems_allowed,omitempty"`
 	RedemptionCount int32                  `protobuf:"varint,5,opt,name=redemption_count,json=redemptionCount,proto3" json:"redemption_count,omitempty"`
-	CodeRaw         string                 `protobuf:"bytes,6,opt,name=code_raw,json=codeRaw,proto3" json:"code_raw,omitempty"`
-	CreatedAt       int64                  `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Raw activation code, shown only once at creation; the server stores only its hash.
+	CodeRaw       string `protobuf:"bytes,6,opt,name=code_raw,json=codeRaw,proto3" json:"code_raw,omitempty"`
+	CreatedAt     int64  `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ActivationCodeResponse) Reset() {
@@ -4796,13 +4906,19 @@ func (x *ActivationCodeResponse) GetCreatedAt() int64 {
 }
 
 type ListActivationCodesRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"` // empty = no filter: all licenses
-	Status    string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`                        // empty = any status
-	Page      int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only codes for this license. Empty means no filter: all licenses.
+	LicenseId string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "status", "redemptionCount", "createdAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Search is prefix-only: an exact, case-insensitive match on the stored
 	// 3-character code prefix. Raw activation codes are never stored, so a
 	// term longer than 3 characters always matches nothing. Not a substring
@@ -4892,14 +5008,19 @@ func (x *ListActivationCodesRequest) GetSearch() string {
 }
 
 type ListActivationCodesResponse struct {
-	state           protoimpl.MessageState    `protogen:"open.v1"`
-	ActivationCodes []*ActivationCodeResponse `protobuf:"bytes,1,rep,name=activation_codes,json=activationCodes,proto3" json:"activation_codes,omitempty"` // legacy: same rows as entries
-	Total           int32                     `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page            int32                     `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit           int32                     `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries         []*ActivationCodeResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	ActivationCodes []*ActivationCodeResponse `protobuf:"bytes,1,rep,name=activation_codes,json=activationCodes,proto3" json:"activation_codes,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*ActivationCodeResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListActivationCodesResponse) Reset() {
@@ -4967,6 +5088,8 @@ func (x *ListActivationCodesResponse) GetEntries() []*ActivationCodeResponse {
 	return nil
 }
 
+// Adds and activates a new signing key for a product. The previous key stays
+// verifiable while it retires.
 type RotateSigningKeyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
@@ -5095,9 +5218,11 @@ func (x *RotateSigningKeyResponse) GetProductId() string {
 	return ""
 }
 
+// Reads a product's stored signing keys, newest first.
 type ListSigningKeysRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product whose signing keys to list. Required: without it the server has no product to read keys for.
+	ProductId     string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5183,9 +5308,12 @@ func (x *ListSigningKeysResponse) GetKeys() []*SigningKeyResponse {
 	return nil
 }
 
+// Reads the publicly verifiable signing keys (active and retiring) for a
+// product. Public keys only; no authentication required.
 type GetSigningKeysRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product whose public verification keys to return. Required: SDKs and agents fetch these to validate tokens after a key rotation.
+	ProductId     string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5384,14 +5512,21 @@ func (x *SigningKeyResponse) GetPublicKey() []byte {
 	return nil
 }
 
+// Reads the audit trail, paged, with an optional target and free-text filter.
 type GetAuditLogRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	TargetType string                 `protobuf:"bytes,1,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
-	TargetId   string                 `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
-	Limit      int32                  `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
-	Page       int32                  `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`
-	SortBy     string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order      string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Audit target type filter (e.g. "license", "tenant"). Empty means no filter.
+	TargetType string `protobuf:"bytes,1,opt,name=target_type,json=targetType,proto3" json:"target_type,omitempty"`
+	// Only entries whose target id matches. With both target filters empty the whole trail is listed, newest first.
+	TargetId string `protobuf:"bytes,2,opt,name=target_id,json=targetId,proto3" json:"target_id,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`
+	// Sort key, a proto JSON field name: "id", "action", "actorId", "actorType", "targetId", "targetType", "createdAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -5482,10 +5617,13 @@ type GetAuditLogResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Unlike the other admin lists, this field is already the paged array, so
 	// the envelope completes it rather than duplicating it.
-	Entries       []*AuditEntryResponse `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
-	Total         int32                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"` // rows matching the filter, across all pages
-	Page          int32                 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	Entries []*AuditEntryResponse `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit         int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5752,6 +5890,8 @@ func (x *VerifyAuditChainResponse) GetErrorMessage() string {
 	return ""
 }
 
+// Billing subscription change or cancellation for a license.
+// OnSubscriptionCancelled treats an empty license_id as a successful no-op.
 type SubscriptionEvent struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	LicenseId      string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
@@ -5844,6 +5984,7 @@ func (x *SubscriptionEvent) GetUpdatedValidTo() int64 {
 	return 0
 }
 
+// Failed payment notification; three consecutive failures suspend the license.
 type PaymentFailedEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
@@ -5920,6 +6061,7 @@ func (x *PaymentFailedEvent) GetReason() string {
 	return ""
 }
 
+// Issues a trial license (14 days by default) for a tenant and product.
 type TrialStartedEvent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -5996,9 +6138,11 @@ func (x *TrialStartedEvent) GetReason() string {
 	return ""
 }
 
+// Reads the products the calling partner is enrolled for (unpaged).
 type ResellerListProductsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty means any status.
+	Status        string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6041,8 +6185,9 @@ func (x *ResellerListProductsRequest) GetStatus() string {
 }
 
 type ResellerListProductsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Products      []*ProductResponse     `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The enrolled products. This list is unpaged and returns no envelope.
+	Products      []*ProductResponse `protobuf:"bytes,1,rep,name=products,proto3" json:"products,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6084,6 +6229,8 @@ func (x *ResellerListProductsResponse) GetProducts() []*ProductResponse {
 	return nil
 }
 
+// Issues a license under the calling partner's per-product quota.
+// The tenant must be served by that partner.
 type ResellerIssueLicenseRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TenantId      string                 `protobuf:"bytes,1,opt,name=tenant_id,json=tenantId,proto3" json:"tenant_id,omitempty"`
@@ -6260,6 +6407,7 @@ func (x *ResellerIssueLicenseResponse) GetActivationCode() string {
 	return ""
 }
 
+// Issues an activation code for one of the partner's licenses.
 type ResellerCreateActivationCodeRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	LicenseId       string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
@@ -6329,8 +6477,9 @@ func (x *ResellerCreateActivationCodeRequest) GetTtlSeconds() int64 {
 }
 
 type ResellerGetLicenseRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId     string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6373,13 +6522,19 @@ func (x *ResellerGetLicenseRequest) GetLicenseId() string {
 }
 
 type ResellerListLicensesRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	ProductId string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Status    string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Page      int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only rows for this product. Omit or leave empty for all products.
+	ProductId string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "jti", "status", "type", "edition", "seats", "validFrom", "validTo", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -6467,12 +6622,17 @@ func (x *ResellerListLicensesRequest) GetSearch() string {
 }
 
 type ResellerListLicensesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Licenses      []*GetLicenseResponse  `protobuf:"bytes,1,rep,name=licenses,proto3" json:"licenses,omitempty"` // legacy: same rows as entries
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*GetLicenseResponse  `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	Licenses []*GetLicenseResponse `protobuf:"bytes,1,rep,name=licenses,proto3" json:"licenses,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*GetLicenseResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6543,8 +6703,9 @@ func (x *ResellerListLicensesResponse) GetEntries() []*GetLicenseResponse {
 }
 
 type ResellerGetDeploymentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DeploymentId  string                 `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Deployment id (hex UUID) taken from the path.
+	DeploymentId  string `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6587,13 +6748,19 @@ func (x *ResellerGetDeploymentRequest) GetDeploymentId() string {
 }
 
 type ResellerListDeploymentsRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	ProductId string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Status    string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Page      int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only rows for this product. Omit or leave empty for all products.
+	ProductId string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "fingerprint", "status", "regionCode", "lastHeartbeatAt", "firstHeartbeatAt", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -6681,12 +6848,17 @@ func (x *ResellerListDeploymentsRequest) GetSearch() string {
 }
 
 type ResellerListDeploymentsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Deployments   []*DeploymentResponse  `protobuf:"bytes,1,rep,name=deployments,proto3" json:"deployments,omitempty"` // legacy: same rows as entries
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*DeploymentResponse  `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	Deployments []*DeploymentResponse `protobuf:"bytes,1,rep,name=deployments,proto3" json:"deployments,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*DeploymentResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6756,10 +6928,13 @@ func (x *ResellerListDeploymentsResponse) GetEntries() []*DeploymentResponse {
 	return nil
 }
 
+// Reads how many licenses the partner has left under a product and type.
 type ResellerCheckQuotaRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	QuotaType     string                 `protobuf:"bytes,2,opt,name=quota_type,json=quotaType,proto3" json:"quota_type,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product the quota is checked against.
+	ProductId string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// License type the quota limits: trial, subscription or perpetual.
+	QuotaType     string `protobuf:"bytes,2,opt,name=quota_type,json=quotaType,proto3" json:"quota_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -6868,6 +7043,7 @@ func (x *ResellerCheckQuotaResponse) GetLimit() int32 {
 	return 0
 }
 
+// Provisions a client tenant owned by the calling partner.
 type ResellerCreateTenantRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -6923,13 +7099,19 @@ func (x *ResellerCreateTenantRequest) GetRegionCode() string {
 }
 
 type ResellerListTenantsRequest struct {
-	state      protoimpl.MessageState `protogen:"open.v1"`
-	Status     string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`                           // empty means any status
-	RegionCode string                 `protobuf:"bytes,2,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"` // empty means any region
-	Page       int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit      int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy     string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"` // name | status | regionCode | createdAt | updatedAt
-	Order      string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`                 // "asc" or "desc"; empty defaults to desc
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	// Empty means any region.
+	RegionCode string `protobuf:"bytes,2,opt,name=region_code,json=regionCode,proto3" json:"region_code,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "name", "status", "regionCode", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over the client name. Substring, case-insensitive;
 	// ANDed with the filters above.
 	Search        string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -7020,11 +7202,15 @@ type ResellerListTenantsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Legacy list field: the same rows as entries. Kept for existing clients
 	// while they migrate to the paged envelope below.
-	Tenants       []*TenantResponse `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
-	Total         int32             `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"` // rows matching the filter, across all pages
-	Page          int32             `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32             `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*TenantResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"` // the requested page
+	Tenants []*TenantResponse `protobuf:"bytes,1,rep,name=tenants,proto3" json:"tenants,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*TenantResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7130,6 +7316,7 @@ func (*TenantGetProfileRequest) Descriptor() ([]byte, []int) {
 	return file_license_v1_license_proto_rawDescGZIP(), []int{96}
 }
 
+// Renames the tenant.
 type TenantUpdateProfileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -7175,13 +7362,19 @@ func (x *TenantUpdateProfileRequest) GetName() string {
 }
 
 type TenantListLicensesRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	ProductId string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Status    string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Page      int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only rows for this product. Omit or leave empty for all products.
+	ProductId string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "jti", "status", "type", "edition", "seats", "validFrom", "validTo", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -7269,12 +7462,17 @@ func (x *TenantListLicensesRequest) GetSearch() string {
 }
 
 type TenantListLicensesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Licenses      []*GetLicenseResponse  `protobuf:"bytes,1,rep,name=licenses,proto3" json:"licenses,omitempty"` // legacy: same rows as entries
-	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries       []*GetLicenseResponse  `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	Licenses []*GetLicenseResponse `protobuf:"bytes,1,rep,name=licenses,proto3" json:"licenses,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*GetLicenseResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7345,8 +7543,9 @@ func (x *TenantListLicensesResponse) GetEntries() []*GetLicenseResponse {
 }
 
 type TenantGetLicenseRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId     string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7389,8 +7588,9 @@ func (x *TenantGetLicenseRequest) GetLicenseId() string {
 }
 
 type TenantGetLicenseTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId     string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// License id (hex UUID) taken from the path.
+	LicenseId     string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7485,13 +7685,19 @@ func (x *TenantLicenseTokenResponse) GetVersion() int32 {
 }
 
 type TenantListDeploymentsRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	ProductId string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
-	Status    string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Page      int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only rows for this product. Omit or leave empty for all products.
+	ProductId string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "fingerprint", "status", "regionCode", "lastHeartbeatAt", "firstHeartbeatAt", "createdAt", "updatedAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Free-text search over human-readable columns only (never ids).
 	// Substring, case-insensitive; ANDed with the filters above.
 	Search        string `protobuf:"bytes,7,opt,name=search,proto3" json:"search,omitempty"`
@@ -7579,11 +7785,16 @@ func (x *TenantListDeploymentsRequest) GetSearch() string {
 }
 
 type TenantListDeploymentsResponse struct {
-	state         protoimpl.MessageState      `protogen:"open.v1"`
-	Deployments   []*TenantDeploymentResponse `protobuf:"bytes,1,rep,name=deployments,proto3" json:"deployments,omitempty"` // legacy: same rows as entries
-	Total         int32                       `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page          int32                       `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit         int32                       `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	Deployments []*TenantDeploymentResponse `protobuf:"bytes,1,rep,name=deployments,proto3" json:"deployments,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
 	Entries       []*TenantDeploymentResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -7770,10 +7981,15 @@ func (x *TenantDeploymentResponse) GetUpdatedAt() int64 {
 	return 0
 }
 
+// Unbinds a deployment from its license. The deployment id comes
+// from the path; reason is an optional query parameter.
 type TenantDeactivateDeploymentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DeploymentId  string                 `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
-	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Deployment id (hex UUID) taken from the path.
+	DeploymentId string `protobuf:"bytes,1,opt,name=deployment_id,json=deploymentId,proto3" json:"deployment_id,omitempty"`
+	// Reason recorded in the audit trail; empty defaults to "deactivated by
+	// tenant". Sent as a query parameter.
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7874,6 +8090,7 @@ func (x *TenantDeactivateDeploymentResponse) GetStatus() string {
 	return ""
 }
 
+// Issues an activation code for one of the tenant's licenses.
 type TenantCreateActivationCodeRequest struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	LicenseId       string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
@@ -7943,13 +8160,19 @@ func (x *TenantCreateActivationCodeRequest) GetTtlSeconds() int64 {
 }
 
 type TenantListActivationCodesRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	LicenseId string                 `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
-	Status    string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
-	Page      int32                  `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit     int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	SortBy    string                 `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
-	Order     string                 `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Only codes for this license. Empty means no filter: all of the tenant's codes.
+	LicenseId string `protobuf:"bytes,1,opt,name=license_id,json=licenseId,proto3" json:"license_id,omitempty"`
+	// Empty means any status.
+	Status string `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	// 1-based page number. 0 or negative means the first page.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size, clamped server-side to 1..200 (default 50). Omitting both page and limit returns every row.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// Sort key, a proto JSON field name: "id", "status", "redemptionCount", "createdAt". Anything unrecognized falls back to the endpoint's default order.
+	SortBy string `protobuf:"bytes,5,opt,name=sort_by,json=sortBy,proto3" json:"sort_by,omitempty"`
+	// "asc" or "desc"; empty defaults to desc.
+	Order string `protobuf:"bytes,6,opt,name=order,proto3" json:"order,omitempty"`
 	// Search is prefix-only: an exact, case-insensitive match on the stored
 	// 3-character code prefix. Raw activation codes are never stored, so a
 	// term longer than 3 characters always matches nothing. Not a substring
@@ -8039,14 +8262,19 @@ func (x *TenantListActivationCodesRequest) GetSearch() string {
 }
 
 type TenantListActivationCodesResponse struct {
-	state           protoimpl.MessageState    `protogen:"open.v1"`
-	ActivationCodes []*ActivationCodeResponse `protobuf:"bytes,1,rep,name=activation_codes,json=activationCodes,proto3" json:"activation_codes,omitempty"` // legacy: same rows as entries
-	Total           int32                     `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
-	Page            int32                     `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
-	Limit           int32                     `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
-	Entries         []*ActivationCodeResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Legacy list field: the same rows as entries. Kept for existing clients while they migrate to the paged envelope below.
+	ActivationCodes []*ActivationCodeResponse `protobuf:"bytes,1,rep,name=activation_codes,json=activationCodes,proto3" json:"activation_codes,omitempty"`
+	// Rows matching the filter, across all pages.
+	Total int32 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	// Page echoed back from the request.
+	Page int32 `protobuf:"varint,3,opt,name=page,proto3" json:"page,omitempty"`
+	// Page size echoed back from the request.
+	Limit int32 `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	// The requested page.
+	Entries       []*ActivationCodeResponse `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *TenantListActivationCodesResponse) Reset() {
@@ -8115,8 +8343,9 @@ func (x *TenantListActivationCodesResponse) GetEntries() []*ActivationCodeRespon
 }
 
 type TenantUsageSummaryRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProductId     string                 `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Product id (hex UUID) taken from the path.
+	ProductId     string `protobuf:"bytes,1,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -8307,7 +8536,7 @@ var File_license_v1_license_proto protoreflect.FileDescriptor
 const file_license_v1_license_proto_rawDesc = "" +
 	"\n" +
 	"\x18license/v1/license.proto\x12\n" +
-	"license.v1\x1a\x1cgoogle/api/annotations.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"\a\n" +
+	"license.v1\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a.protoc-gen-openapiv2/options/annotations.proto\"\a\n" +
 	"\x05Empty\"\x7f\n" +
 	"\aProblem\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x14\n" +
@@ -8328,16 +8557,16 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"licenseJti\x12\x1d\n" +
 	"\n" +
 	"revoked_at\x18\x03 \x01(\x03R\trevokedAt\x12\x16\n" +
-	"\x06reason\x18\x04 \x01(\tR\x06reason\"\x82\x01\n" +
-	"\vUsageMetric\x12\x1f\n" +
-	"\vmodule_code\x18\x01 \x01(\tR\n" +
-	"moduleCode\x12\x1f\n" +
-	"\vmetric_name\x18\x02 \x01(\tR\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\"\x8c\x01\n" +
+	"\vUsageMetric\x12$\n" +
+	"\vmodule_code\x18\x01 \x01(\tB\x03\xe0A\x02R\n" +
+	"moduleCode\x12$\n" +
+	"\vmetric_name\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
 	"metricName\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\x01R\x05value\x12\x1b\n" +
-	"\ttenant_id\x18\x04 \x01(\tR\btenantId\"\xcb\x01\n" +
-	"\x10HeartbeatRequest\x12#\n" +
-	"\rlicense_token\x18\x01 \x01(\tR\flicenseToken\x12\x1f\n" +
+	"\ttenant_id\x18\x04 \x01(\tR\btenantId\"\xd0\x01\n" +
+	"\x10HeartbeatRequest\x12(\n" +
+	"\rlicense_token\x18\x01 \x01(\tB\x03\xe0A\x02R\flicenseToken\x12\x1f\n" +
 	"\vlease_token\x18\x02 \x01(\tR\n" +
 	"leaseToken\x12 \n" +
 	"\vfingerprint\x18\x03 \x01(\tR\vfingerprint\x12-\n" +
@@ -8361,10 +8590,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\vregion_code\x18\x01 \x01(\tR\n" +
 	"regionCode\x12.\n" +
 	"\aentries\x18\x02 \x03(\v2\x14.license.v1.CRLEntryR\aentries\x12(\n" +
-	"\x10next_sequence_id\x18\x03 \x01(\x03R\x0enextSequenceId\"l\n" +
+	"\x10next_sequence_id\x18\x03 \x01(\x03R\x0enextSequenceId\"q\n" +
 	"\x12ReportUsageRequest\x12#\n" +
-	"\rdeployment_id\x18\x01 \x01(\tR\fdeploymentId\x121\n" +
-	"\ametrics\x18\x02 \x03(\v2\x17.license.v1.UsageMetricR\ametrics\"1\n" +
+	"\rdeployment_id\x18\x01 \x01(\tR\fdeploymentId\x126\n" +
+	"\ametrics\x18\x02 \x03(\v2\x17.license.v1.UsageMetricB\x03\xe0A\x02R\ametrics\"1\n" +
 	"\x13ReportUsageResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\x05R\baccepted\":\n" +
 	"\x13FetchLicenseRequest\x12#\n" +
@@ -8378,9 +8607,9 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\bvalid_to\x18\x05 \x01(\x03R\avalidTo\x12\x14\n" +
 	"\x05seats\x18\x06 \x01(\x05R\x05seats\x121\n" +
 	"\amodules\x18\a \x03(\v2\x17.license.v1.ModuleEntryR\amodules\x12'\n" +
-	"\x0fmax_deployments\x18\b \x01(\x05R\x0emaxDeployments\"\x89\x01\n" +
-	"\x0fActivateRequest\x12 \n" +
-	"\vfingerprint\x18\x02 \x01(\tR\vfingerprint\x12!\n" +
+	"\x0fmax_deployments\x18\b \x01(\x05R\x0emaxDeployments\"\x8e\x01\n" +
+	"\x0fActivateRequest\x12%\n" +
+	"\vfingerprint\x18\x02 \x01(\tB\x03\xe0A\x02R\vfingerprint\x12!\n" +
 	"\fproduct_code\x18\x03 \x01(\tR\vproductCode\x12\x1a\n" +
 	"\bhostname\x18\x04 \x01(\tR\bhostnameJ\x04\b\x01\x10\x02R\x0factivation_code\"\x80\x02\n" +
 	"\x10ActivateResponse\x12#\n" +
@@ -8390,10 +8619,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x10lease_expires_at\x18\x03 \x01(\x03R\x0eleaseExpiresAt\x12,\n" +
 	"\x12deployment_api_key\x18\x04 \x01(\tR\x10deploymentApiKey\x12#\n" +
 	"\rdeployment_id\x18\x05 \x01(\tR\fdeploymentId\x12)\n" +
-	"\x10refresh_interval\x18\x06 \x01(\x03R\x0frefreshInterval\"\x84\x01\n" +
-	"\x13CreateTenantRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
-	"\vregion_code\x18\x02 \x01(\tR\n" +
+	"\x10refresh_interval\x18\x06 \x01(\x03R\x0frefreshInterval\"\x8e\x01\n" +
+	"\x13CreateTenantRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12$\n" +
+	"\vregion_code\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
 	"regionCode\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\x12\x1f\n" +
 	"\vreseller_id\x18\x04 \x01(\tR\n" +
@@ -8439,10 +8668,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"updated_at\x18\x06 \x01(\x03R\tupdatedAt\x12\x17\n" +
 	"\auser_id\x18\a \x01(\tR\x06userId\x12\x1f\n" +
 	"\vreseller_id\x18\b \x01(\tR\n" +
-	"resellerId\"e\n" +
-	"\x15CreateResellerRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
-	"\vregion_code\x18\x02 \x01(\tR\n" +
+	"resellerId\"o\n" +
+	"\x15CreateResellerRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12$\n" +
+	"\vregion_code\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
 	"regionCode\x12\x17\n" +
 	"\auser_id\x18\x03 \x01(\tR\x06userId\"\x8e\x01\n" +
 	"\x15UpdateResellerRequest\x12\x1f\n" +
@@ -8478,15 +8707,15 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x126\n" +
-	"\aentries\x18\x05 \x03(\v2\x1c.license.v1.ResellerResponseR\aentries\"\xbd\x01\n" +
+	"\aentries\x18\x05 \x03(\v2\x1c.license.v1.ResellerResponseR\aentries\"\xcc\x01\n" +
 	"\x1aCreateResellerQuotaRequest\x12\x1f\n" +
 	"\vreseller_id\x18\x01 \x01(\tR\n" +
-	"resellerId\x12\x1d\n" +
+	"resellerId\x12\"\n" +
 	"\n" +
-	"product_id\x18\x02 \x01(\tR\tproductId\x12\x1d\n" +
+	"product_id\x18\x02 \x01(\tB\x03\xe0A\x02R\tproductId\x12\"\n" +
 	"\n" +
-	"quota_type\x18\x03 \x01(\tR\tquotaType\x12\x1f\n" +
-	"\vlimit_count\x18\x04 \x01(\x05R\n" +
+	"quota_type\x18\x03 \x01(\tB\x03\xe0A\x02R\tquotaType\x12$\n" +
+	"\vlimit_count\x18\x04 \x01(\x05B\x03\xe0A\x02R\n" +
 	"limitCount\x12\x1f\n" +
 	"\vperiod_days\x18\x05 \x01(\x05R\n" +
 	"periodDays\"<\n" +
@@ -8509,10 +8738,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"periodDays\x12\x1d\n" +
 	"\n" +
 	"used_count\x18\x06 \x01(\x05R\tusedCount\x12\x19\n" +
-	"\breset_at\x18\a \x01(\x03R\aresetAt\"\x89\x03\n" +
-	"\x14CreateProductRequest\x12\x12\n" +
-	"\x04code\x18\x01 \x01(\tR\x04code\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12!\n" +
+	"\breset_at\x18\a \x01(\x03R\aresetAt\"\x93\x03\n" +
+	"\x14CreateProductRequest\x12\x17\n" +
+	"\x04code\x18\x01 \x01(\tB\x03\xe0A\x02R\x04code\x12\x17\n" +
+	"\x04name\x18\x02 \x01(\tB\x03\xe0A\x02R\x04name\x12!\n" +
 	"\ftenant_model\x18\x03 \x01(\tR\vtenantModel\x12'\n" +
 	"\x0flicensing_model\x18\x04 \x01(\tR\x0elicensingModel\x122\n" +
 	"\x15default_lease_seconds\x18\x05 \x01(\x05R\x13defaultLeaseSeconds\x126\n" +
@@ -8611,13 +8840,13 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"regionCode\x12\x1d\n" +
 	"\n" +
 	"sort_order\x18\v \x01(\x05R\tsortOrder\x12\x16\n" +
-	"\x06status\x18\f \x01(\tR\x06status\"\xec\x02\n" +
-	"\x13IssueLicenseRequest\x12\x1b\n" +
-	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\x06status\x18\f \x01(\tR\x06status\"\xfb\x02\n" +
+	"\x13IssueLicenseRequest\x12 \n" +
+	"\ttenant_id\x18\x01 \x01(\tB\x03\xe0A\x02R\btenantId\x12\"\n" +
 	"\n" +
-	"product_id\x18\x02 \x01(\tR\tproductId\x12\x18\n" +
-	"\aedition\x18\x03 \x01(\tR\aedition\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\tR\x04type\x12\x1d\n" +
+	"product_id\x18\x02 \x01(\tB\x03\xe0A\x02R\tproductId\x12\x18\n" +
+	"\aedition\x18\x03 \x01(\tR\aedition\x12\x17\n" +
+	"\x04type\x18\x04 \x01(\tB\x03\xe0A\x02R\x04type\x12\x1d\n" +
 	"\n" +
 	"valid_from\x18\x05 \x01(\x03R\tvalidFrom\x12\x19\n" +
 	"\bvalid_to\x18\x06 \x01(\x03R\avalidTo\x12\x14\n" +
@@ -8633,14 +8862,14 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\vlicense_jti\x18\x02 \x01(\tR\n" +
 	"licenseJti\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\x05R\aversion\x12\x19\n" +
-	"\bcode_raw\x18\x04 \x01(\tR\acodeRaw\"\x95\x02\n" +
+	"\bcode_raw\x18\x04 \x01(\tR\acodeRaw\"\x9a\x02\n" +
 	"\x15ReissueLicenseRequest\x12\x1d\n" +
 	"\n" +
 	"license_id\x18\x01 \x01(\tR\tlicenseId\x12\x19\n" +
 	"\x05seats\x18\x02 \x01(\x05H\x00R\x05seats\x88\x01\x01\x121\n" +
 	"\amodules\x18\x03 \x03(\v2\x17.license.v1.ModuleEntryR\amodules\x12\x1e\n" +
-	"\bvalid_to\x18\x04 \x01(\x03H\x01R\avalidTo\x88\x01\x01\x12\x16\n" +
-	"\x06reason\x18\x05 \x01(\tR\x06reason\x12,\n" +
+	"\bvalid_to\x18\x04 \x01(\x03H\x01R\avalidTo\x88\x01\x01\x12\x1b\n" +
+	"\x06reason\x18\x05 \x01(\tB\x03\xe0A\x02R\x06reason\x12,\n" +
 	"\x0fmax_deployments\x18\x06 \x01(\x05H\x02R\x0emaxDeployments\x88\x01\x01B\b\n" +
 	"\x06_seatsB\v\n" +
 	"\t_valid_toB\x12\n" +
@@ -8658,11 +8887,11 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x15RevokeLicenseResponse\x12\x1d\n" +
 	"\n" +
 	"license_id\x18\x01 \x01(\tR\tlicenseId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\"z\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"\x7f\n" +
 	"\x14ResumeLicenseRequest\x12\x1d\n" +
 	"\n" +
-	"license_id\x18\x01 \x01(\tR\tlicenseId\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x1e\n" +
+	"license_id\x18\x01 \x01(\tR\tlicenseId\x12\x1b\n" +
+	"\x06reason\x18\x02 \x01(\tB\x03\xe0A\x02R\x06reason\x12\x1e\n" +
 	"\bvalid_to\x18\x03 \x01(\x03H\x00R\avalidTo\x88\x01\x01B\v\n" +
 	"\t_valid_to\"\xc4\x01\n" +
 	"\x15ResumeLicenseResponse\x12\x1d\n" +
@@ -8762,10 +8991,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"created_at\x18\a \x01(\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\x03R\tupdatedAt\x12!\n" +
-	"\fproduct_code\x18\t \x01(\tR\vproductCode\"\xb1\x01\n" +
-	"\x1bCreateActivationCodeRequest\x12\x1d\n" +
+	"\fproduct_code\x18\t \x01(\tR\vproductCode\"\xb6\x01\n" +
+	"\x1bCreateActivationCodeRequest\x12\"\n" +
 	"\n" +
-	"license_id\x18\x01 \x01(\tR\tlicenseId\x12'\n" +
+	"license_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tlicenseId\x12'\n" +
 	"\x0fredeems_allowed\x18\x02 \x01(\x05R\x0eredeemsAllowed\x12)\n" +
 	"\x10delivery_channel\x18\x03 \x01(\tR\x0fdeliveryChannel\x12\x1f\n" +
 	"\vttl_seconds\x18\x04 \x01(\x03R\n" +
@@ -8794,28 +9023,28 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x12<\n" +
-	"\aentries\x18\x05 \x03(\v2\".license.v1.ActivationCodeResponseR\aentries\"\xbd\x01\n" +
-	"\x17RotateSigningKeyRequest\x12\x1d\n" +
+	"\aentries\x18\x05 \x03(\v2\".license.v1.ActivationCodeResponseR\aentries\"\xcc\x01\n" +
+	"\x17RotateSigningKeyRequest\x12\"\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\x12\x1e\n" +
-	"\vnew_key_kid\x18\x02 \x01(\tR\tnewKeyKid\x12\x1c\n" +
-	"\talgorithm\x18\x03 \x01(\tR\talgorithm\x12\x1d\n" +
+	"product_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tproductId\x12#\n" +
+	"\vnew_key_kid\x18\x02 \x01(\tB\x03\xe0A\x02R\tnewKeyKid\x12\x1c\n" +
+	"\talgorithm\x18\x03 \x01(\tR\talgorithm\x12\"\n" +
 	"\n" +
-	"public_key\x18\x04 \x01(\fR\tpublicKey\x12&\n" +
+	"public_key\x18\x04 \x01(\fB\x03\xe0A\x02R\tpublicKey\x12&\n" +
 	"\x0fprivate_key_ref\x18\x05 \x01(\tR\rprivateKeyRef\"W\n" +
 	"\x18RotateSigningKeyResponse\x12\x1c\n" +
 	"\n" +
 	"new_key_id\x18\x01 \x01(\tR\bnewKeyId\x12\x1d\n" +
 	"\n" +
-	"product_id\x18\x02 \x01(\tR\tproductId\"7\n" +
-	"\x16ListSigningKeysRequest\x12\x1d\n" +
+	"product_id\x18\x02 \x01(\tR\tproductId\"<\n" +
+	"\x16ListSigningKeysRequest\x12\"\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\"M\n" +
+	"product_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tproductId\"M\n" +
 	"\x17ListSigningKeysResponse\x122\n" +
-	"\x04keys\x18\x01 \x03(\v2\x1e.license.v1.SigningKeyResponseR\x04keys\"6\n" +
-	"\x15GetSigningKeysRequest\x12\x1d\n" +
+	"\x04keys\x18\x01 \x03(\v2\x1e.license.v1.SigningKeyResponseR\x04keys\";\n" +
+	"\x15GetSigningKeysRequest\x12\"\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\"L\n" +
+	"product_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tproductId\"L\n" +
 	"\x16GetSigningKeysResponse\x122\n" +
 	"\x04keys\x18\x01 \x03(\v2\x1e.license.v1.SigningKeyResponseR\x04keys\"\x83\x02\n" +
 	"\x12SigningKeyResponse\x12\x0e\n" +
@@ -8863,10 +9092,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x18VerifyAuditChainResponse\x12%\n" +
 	"\x0everified_count\x18\x01 \x01(\x05R\rverifiedCount\x12\x14\n" +
 	"\x05valid\x18\x02 \x01(\bR\x05valid\x12#\n" +
-	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"\x97\x02\n" +
-	"\x11SubscriptionEvent\x12\x1d\n" +
+	"\rerror_message\x18\x03 \x01(\tR\ferrorMessage\"\x9c\x02\n" +
+	"\x11SubscriptionEvent\x12\"\n" +
 	"\n" +
-	"license_id\x18\x01 \x01(\tR\tlicenseId\x12\x1b\n" +
+	"license_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tlicenseId\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
 	"\n" +
 	"event_type\x18\x03 \x01(\tR\teventType\x12\x16\n" +
@@ -8881,10 +9110,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\n" +
 	"payment_id\x18\x03 \x01(\tR\tpaymentId\x12#\n" +
 	"\rfailure_count\x18\x04 \x01(\x05R\ffailureCount\x12\x16\n" +
-	"\x06reason\x18\x05 \x01(\tR\x06reason\"\xbd\x01\n" +
-	"\x11TrialStartedEvent\x12\x1b\n" +
-	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12!\n" +
-	"\fproduct_code\x18\x02 \x01(\tR\vproductCode\x12\x1d\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\"\xc7\x01\n" +
+	"\x11TrialStartedEvent\x12 \n" +
+	"\ttenant_id\x18\x01 \x01(\tB\x03\xe0A\x02R\btenantId\x12&\n" +
+	"\fproduct_code\x18\x02 \x01(\tB\x03\xe0A\x02R\vproductCode\x12\x1d\n" +
 	"\n" +
 	"trial_days\x18\x03 \x01(\x03R\ttrialDays\x121\n" +
 	"\amodules\x18\x04 \x03(\v2\x17.license.v1.ModuleEntryR\amodules\x12\x16\n" +
@@ -8892,13 +9121,13 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x1bResellerListProductsRequest\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\"W\n" +
 	"\x1cResellerListProductsResponse\x127\n" +
-	"\bproducts\x18\x01 \x03(\v2\x1b.license.v1.ProductResponseR\bproducts\"\xa2\x02\n" +
-	"\x1bResellerIssueLicenseRequest\x12\x1b\n" +
-	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
+	"\bproducts\x18\x01 \x03(\v2\x1b.license.v1.ProductResponseR\bproducts\"\xb1\x02\n" +
+	"\x1bResellerIssueLicenseRequest\x12 \n" +
+	"\ttenant_id\x18\x01 \x01(\tB\x03\xe0A\x02R\btenantId\x12\"\n" +
 	"\n" +
-	"product_id\x18\x02 \x01(\tR\tproductId\x12\x18\n" +
-	"\aedition\x18\x03 \x01(\tR\aedition\x12\x12\n" +
-	"\x04type\x18\x04 \x01(\tR\x04type\x12\x1d\n" +
+	"product_id\x18\x02 \x01(\tB\x03\xe0A\x02R\tproductId\x12\x18\n" +
+	"\aedition\x18\x03 \x01(\tR\aedition\x12\x17\n" +
+	"\x04type\x18\x04 \x01(\tB\x03\xe0A\x02R\x04type\x12\x1d\n" +
 	"\n" +
 	"valid_from\x18\x05 \x01(\x03R\tvalidFrom\x12\x19\n" +
 	"\bvalid_to\x18\x06 \x01(\x03R\avalidTo\x12\x14\n" +
@@ -8911,10 +9140,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\vlicense_jti\x18\x02 \x01(\tR\n" +
 	"licenseJti\x12\x18\n" +
 	"\aversion\x18\x03 \x01(\x05R\aversion\x12'\n" +
-	"\x0factivation_code\x18\x04 \x01(\tR\x0eactivationCode\"\xb9\x01\n" +
-	"#ResellerCreateActivationCodeRequest\x12\x1d\n" +
+	"\x0factivation_code\x18\x04 \x01(\tR\x0eactivationCode\"\xbe\x01\n" +
+	"#ResellerCreateActivationCodeRequest\x12\"\n" +
 	"\n" +
-	"license_id\x18\x01 \x01(\tR\tlicenseId\x12'\n" +
+	"license_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tlicenseId\x12'\n" +
 	"\x0fredeems_allowed\x18\x02 \x01(\x05R\x0eredeemsAllowed\x12)\n" +
 	"\x10delivery_channel\x18\x03 \x01(\tR\x0fdeliveryChannel\x12\x1f\n" +
 	"\vttl_seconds\x18\x04 \x01(\x03R\n" +
@@ -8953,19 +9182,19 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x05total\x18\x02 \x01(\x05R\x05total\x12\x12\n" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x128\n" +
-	"\aentries\x18\x05 \x03(\v2\x1e.license.v1.DeploymentResponseR\aentries\"Y\n" +
-	"\x19ResellerCheckQuotaRequest\x12\x1d\n" +
+	"\aentries\x18\x05 \x03(\v2\x1e.license.v1.DeploymentResponseR\aentries\"c\n" +
+	"\x19ResellerCheckQuotaRequest\x12\"\n" +
 	"\n" +
-	"product_id\x18\x01 \x01(\tR\tproductId\x12\x1d\n" +
+	"product_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tproductId\x12\"\n" +
 	"\n" +
-	"quota_type\x18\x02 \x01(\tR\tquotaType\"d\n" +
+	"quota_type\x18\x02 \x01(\tB\x03\xe0A\x02R\tquotaType\"d\n" +
 	"\x1aResellerCheckQuotaResponse\x12\x1c\n" +
 	"\tavailable\x18\x01 \x01(\bR\tavailable\x12\x12\n" +
 	"\x04used\x18\x02 \x01(\x05R\x04used\x12\x14\n" +
-	"\x05limit\x18\x03 \x01(\x05R\x05limit\"R\n" +
-	"\x1bResellerCreateTenantRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
-	"\vregion_code\x18\x02 \x01(\tR\n" +
+	"\x05limit\x18\x03 \x01(\x05R\x05limit\"\\\n" +
+	"\x1bResellerCreateTenantRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\x12$\n" +
+	"\vregion_code\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
 	"regionCode\"\xc6\x01\n" +
 	"\x1aResellerListTenantsRequest\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12\x1f\n" +
@@ -8982,9 +9211,9 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x04page\x18\x03 \x01(\x05R\x04page\x12\x14\n" +
 	"\x05limit\x18\x04 \x01(\x05R\x05limit\x124\n" +
 	"\aentries\x18\x05 \x03(\v2\x1a.license.v1.TenantResponseR\aentries\"\x19\n" +
-	"\x17TenantGetProfileRequest\"0\n" +
-	"\x1aTenantUpdateProfileRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"\xc3\x01\n" +
+	"\x17TenantGetProfileRequest\"5\n" +
+	"\x1aTenantUpdateProfileRequest\x12\x17\n" +
+	"\x04name\x18\x01 \x01(\tB\x03\xe0A\x02R\x04name\"\xc3\x01\n" +
 	"\x19TenantListLicensesRequest\x12\x1d\n" +
 	"\n" +
 	"product_id\x18\x01 \x01(\tR\tproductId\x12\x16\n" +
@@ -9045,10 +9274,10 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\"a\n" +
 	"\"TenantDeactivateDeploymentResponse\x12#\n" +
 	"\rdeployment_id\x18\x01 \x01(\tR\fdeploymentId\x12\x16\n" +
-	"\x06status\x18\x02 \x01(\tR\x06status\"\xb7\x01\n" +
-	"!TenantCreateActivationCodeRequest\x12\x1d\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\"\xbc\x01\n" +
+	"!TenantCreateActivationCodeRequest\x12\"\n" +
 	"\n" +
-	"license_id\x18\x01 \x01(\tR\tlicenseId\x12'\n" +
+	"license_id\x18\x01 \x01(\tB\x03\xe0A\x02R\tlicenseId\x12'\n" +
 	"\x0fredeems_allowed\x18\x02 \x01(\x05R\x0eredeemsAllowed\x12)\n" +
 	"\x10delivery_channel\x18\x03 \x01(\tR\x0fdeliveryChannel\x12\x1f\n" +
 	"\vttl_seconds\x18\x04 \x01(\x03R\n" +
@@ -9083,7 +9312,7 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\vmetric_name\x18\x02 \x01(\tR\n" +
 	"metricName\x12\x14\n" +
 	"\x05value\x18\x03 \x01(\x01R\x05value\x12#\n" +
-	"\rdeployment_id\x18\x04 \x01(\tR\fdeploymentId2\xc5\t\n" +
+	"\rdeployment_id\x18\x04 \x01(\tR\fdeploymentId2\xc7\t\n" +
 	"\x0eLicenseService\x12\xcb\x01\n" +
 	"\tHeartbeat\x12\x1c.license.v1.HeartbeatRequest\x1a\x1d.license.v1.HeartbeatResponse\"\x80\x01\x92A]JC\n" +
 	"\adefault\x128\n" +
@@ -9108,11 +9337,11 @@ const file_license_v1_license_proto_rawDesc = "" +
 	"\x1dAn unexpected error response.\x12\x17\n" +
 	"\x15\x1a\x13.license.v1.Problemb\x16\n" +
 	"\x14\n" +
-	"\x10deploymentApiKey\x12\x00\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/license/fetch\x12\xc4\x01\n" +
-	"\x0eGetSigningKeys\x12!.license.v1.GetSigningKeysRequest\x1a\".license.v1.GetSigningKeysResponse\"k\x92AEJC\n" +
+	"\x10deploymentApiKey\x12\x00\x82\xd3\xe4\x93\x02\x16:\x01*\"\x11/v1/license/fetch\x12\xc6\x01\n" +
+	"\x0eGetSigningKeys\x12!.license.v1.GetSigningKeysRequest\x1a\".license.v1.GetSigningKeysResponse\"m\x92AGJC\n" +
 	"\adefault\x128\n" +
 	"\x1dAn unexpected error response.\x12\x17\n" +
-	"\x15\x1a\x13.license.v1.Problem\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/license/signing-keys\x12\xbe\x01\n" +
+	"\x15\x1a\x13.license.v1.Problemb\x00\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/v1/license/signing-keys\x12\xbe\x01\n" +
 	"\bActivate\x12\x1b.license.v1.ActivateRequest\x1a\x1c.license.v1.ActivateResponse\"w\x92A]JC\n" +
 	"\adefault\x128\n" +
 	"\x1dAn unexpected error response.\x12\x17\n" +
