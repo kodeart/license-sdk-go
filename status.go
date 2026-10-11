@@ -30,6 +30,10 @@ type AgentStatus struct {
 	Valid bool `json:"valid"`
 	// Message explains a false Valid, for operators and logs.
 	Message string `json:"message,omitempty"`
+	// Reason is the machine-readable counterpart to Message: a token from the
+	// Reason* vocabulary below. A consumer maps it to its own wording instead
+	// of surfacing Message verbatim, so UI text lives with the UI.
+	Reason string `json:"reason,omitempty"`
 	// RawToken is the signed license token. Verify it — it is the only thing
 	// in this payload a consumer should authorize on.
 	RawToken string `json:"rawToken,omitempty"`
@@ -38,6 +42,41 @@ type AgentStatus struct {
 	// RequireOnlineLease verify it and confirm it belongs to RawToken.
 	LeaseToken string `json:"leaseToken,omitempty"`
 }
+
+// AgentStatus.Reason vocabulary. These are stable identifiers, not display
+// text: a consumer maps them to its own localized string. The agent sets exactly
+// one whenever AgentStatus.Valid is false, so a consumer never has to parse
+// Message.
+const (
+	// ReasonNotActivated: no deployment yet and no activation verdict recorded.
+	ReasonNotActivated = "not_activated"
+	// ReasonActivationExpired: the server rejected the activation code as expired.
+	ReasonActivationExpired = "activation_code_expired"
+	// ReasonActivationRevoked: the server rejected the activation code as revoked.
+	ReasonActivationRevoked = "activation_code_revoked"
+	// ReasonActivationRedeemed: the activation code has no redemptions left.
+	ReasonActivationRedeemed = "activation_code_redeemed"
+	// ReasonActivationInvalid: the activation code was not found.
+	ReasonActivationInvalid = "activation_code_invalid"
+	// ReasonMaxDeployments: the license has reached its deployment limit.
+	ReasonMaxDeployments = "max_deployments_reached"
+	// ReasonLicenseNotActive: the license behind the code is not active.
+	ReasonLicenseNotActive = "license_not_active"
+	// ReasonActivationFailed: an activation rejection the agent could not classify.
+	ReasonActivationFailed = "activation_failed"
+	// ReasonRevoked: the deployment's license was revoked server-side.
+	ReasonRevoked = "revoked"
+	// ReasonNoLicense: the deployment exists but holds no license token yet.
+	ReasonNoLicense = "no_license"
+	// ReasonTokenInvalid: the cached token failed offline verification.
+	ReasonTokenInvalid = "token_invalid"
+	// ReasonLeaseRequired: the license needs an online lease the agent lacks.
+	ReasonLeaseRequired = "online_lease_required"
+	// ReasonLeaseExpired: the held online lease has expired.
+	ReasonLeaseExpired = "online_lease_expired"
+	// ReasonLeaseMismatch: the held lease belongs to a different license.
+	ReasonLeaseMismatch = "online_lease_mismatch"
+)
 
 // FetchAgentStatus GETs the agent's status endpoint. Both / and /status serve
 // the same payload; /status is used as the more explicit of the two.
