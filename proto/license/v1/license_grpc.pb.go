@@ -355,6 +355,7 @@ const (
 	AdminService_UpdateTenant_FullMethodName            = "/license.v1.AdminService/UpdateTenant"
 	AdminService_CreateReseller_FullMethodName          = "/license.v1.AdminService/CreateReseller"
 	AdminService_ListResellers_FullMethodName           = "/license.v1.AdminService/ListResellers"
+	AdminService_ListRegions_FullMethodName             = "/license.v1.AdminService/ListRegions"
 	AdminService_UpdateReseller_FullMethodName          = "/license.v1.AdminService/UpdateReseller"
 	AdminService_CreateResellerQuota_FullMethodName     = "/license.v1.AdminService/CreateResellerQuota"
 	AdminService_ListResellerQuotas_FullMethodName      = "/license.v1.AdminService/ListResellerQuotas"
@@ -401,6 +402,8 @@ type AdminServiceClient interface {
 	CreateReseller(ctx context.Context, in *CreateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
 	// ListResellers pages the partners for the admin overview, with case-insensitive name search.
 	ListResellers(ctx context.Context, in *ListResellersRequest, opts ...grpc.CallOption) (*ListResellersResponse, error)
+	// ListRegions returns the region catalog from the regions table.
+	ListRegions(ctx context.Context, in *ListRegionsRequest, opts ...grpc.CallOption) (*ListRegionsResponse, error)
 	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
 	UpdateReseller(ctx context.Context, in *UpdateResellerRequest, opts ...grpc.CallOption) (*ResellerResponse, error)
 	// CreateResellerQuota grants (or re-grants) a reseller quota for a product/type
@@ -525,6 +528,16 @@ func (c *adminServiceClient) ListResellers(ctx context.Context, in *ListReseller
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListResellersResponse)
 	err := c.cc.Invoke(ctx, AdminService_ListResellers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListRegions(ctx context.Context, in *ListRegionsRequest, opts ...grpc.CallOption) (*ListRegionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRegionsResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListRegions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -827,6 +840,8 @@ type AdminServiceServer interface {
 	CreateReseller(context.Context, *CreateResellerRequest) (*ResellerResponse, error)
 	// ListResellers pages the partners for the admin overview, with case-insensitive name search.
 	ListResellers(context.Context, *ListResellersRequest) (*ListResellersResponse, error)
+	// ListRegions returns the region catalog from the regions table.
+	ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error)
 	// UpdateReseller partially updates a reseller: status, name, or the identity user it is linked to (user_id).
 	UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error)
 	// CreateResellerQuota grants (or re-grants) a reseller quota for a product/type
@@ -914,6 +929,9 @@ func (UnimplementedAdminServiceServer) CreateReseller(context.Context, *CreateRe
 }
 func (UnimplementedAdminServiceServer) ListResellers(context.Context, *ListResellersRequest) (*ListResellersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListResellers not implemented")
+}
+func (UnimplementedAdminServiceServer) ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRegions not implemented")
 }
 func (UnimplementedAdminServiceServer) UpdateReseller(context.Context, *UpdateResellerRequest) (*ResellerResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateReseller not implemented")
@@ -1124,6 +1142,24 @@ func _AdminService_ListResellers_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).ListResellers(ctx, req.(*ListResellersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListRegions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRegionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListRegions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListRegions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListRegions(ctx, req.(*ListRegionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1664,6 +1700,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AdminService_ListResellers_Handler,
 		},
 		{
+			MethodName: "ListRegions",
+			Handler:    _AdminService_ListRegions_Handler,
+		},
+		{
 			MethodName: "UpdateReseller",
 			Handler:    _AdminService_UpdateReseller_Handler,
 		},
@@ -1782,6 +1822,7 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 
 const (
 	ResellerService_ListProducts_FullMethodName         = "/license.v1.ResellerService/ListProducts"
+	ResellerService_ListRegions_FullMethodName          = "/license.v1.ResellerService/ListRegions"
 	ResellerService_IssueLicense_FullMethodName         = "/license.v1.ResellerService/IssueLicense"
 	ResellerService_CreateActivationCode_FullMethodName = "/license.v1.ResellerService/CreateActivationCode"
 	ResellerService_GetLicense_FullMethodName           = "/license.v1.ResellerService/GetLicense"
@@ -1799,6 +1840,8 @@ const (
 type ResellerServiceClient interface {
 	// ListProducts returns the products a reseller is enrolled for.
 	ListProducts(ctx context.Context, in *ResellerListProductsRequest, opts ...grpc.CallOption) (*ResellerListProductsResponse, error)
+	// ListRegions returns the region catalog from the regions table.
+	ListRegions(ctx context.Context, in *ListRegionsRequest, opts ...grpc.CallOption) (*ListRegionsResponse, error)
 	// IssueLicense issues a license under a reseller per-product quota.
 	IssueLicense(ctx context.Context, in *ResellerIssueLicenseRequest, opts ...grpc.CallOption) (*ResellerIssueLicenseResponse, error)
 	// CreateActivationCode creates an activation code for one of the reseller own licenses.
@@ -1831,6 +1874,16 @@ func (c *resellerServiceClient) ListProducts(ctx context.Context, in *ResellerLi
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResellerListProductsResponse)
 	err := c.cc.Invoke(ctx, ResellerService_ListProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *resellerServiceClient) ListRegions(ctx context.Context, in *ListRegionsRequest, opts ...grpc.CallOption) (*ListRegionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListRegionsResponse)
+	err := c.cc.Invoke(ctx, ResellerService_ListRegions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -1933,6 +1986,8 @@ func (c *resellerServiceClient) ListTenants(ctx context.Context, in *ResellerLis
 type ResellerServiceServer interface {
 	// ListProducts returns the products a reseller is enrolled for.
 	ListProducts(context.Context, *ResellerListProductsRequest) (*ResellerListProductsResponse, error)
+	// ListRegions returns the region catalog from the regions table.
+	ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error)
 	// IssueLicense issues a license under a reseller per-product quota.
 	IssueLicense(context.Context, *ResellerIssueLicenseRequest) (*ResellerIssueLicenseResponse, error)
 	// CreateActivationCode creates an activation code for one of the reseller own licenses.
@@ -1963,6 +2018,9 @@ type UnimplementedResellerServiceServer struct{}
 
 func (UnimplementedResellerServiceServer) ListProducts(context.Context, *ResellerListProductsRequest) (*ResellerListProductsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListProducts not implemented")
+}
+func (UnimplementedResellerServiceServer) ListRegions(context.Context, *ListRegionsRequest) (*ListRegionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListRegions not implemented")
 }
 func (UnimplementedResellerServiceServer) IssueLicense(context.Context, *ResellerIssueLicenseRequest) (*ResellerIssueLicenseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method IssueLicense not implemented")
@@ -2026,6 +2084,24 @@ func _ResellerService_ListProducts_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ResellerServiceServer).ListProducts(ctx, req.(*ResellerListProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ResellerService_ListRegions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRegionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ResellerServiceServer).ListRegions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ResellerService_ListRegions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ResellerServiceServer).ListRegions(ctx, req.(*ListRegionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -2202,6 +2278,10 @@ var ResellerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListProducts",
 			Handler:    _ResellerService_ListProducts_Handler,
+		},
+		{
+			MethodName: "ListRegions",
+			Handler:    _ResellerService_ListRegions_Handler,
 		},
 		{
 			MethodName: "IssueLicense",
