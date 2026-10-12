@@ -106,12 +106,102 @@ cannot disagree). If you want to honor the licence's grace, apply it yourself:
 Deliberately app-specific, because only the app knows its own module codes:
 
 - **The module set.** Core (always built) and paid module codes.
-- **Entitlements.** Resolving claims into "which modules exist", decided once
-  at boot — a licence that gains or loses a module takes effect on restart.
+- **Entitlements.** Which modules exist and how they are mounted. The SDK's
+  `Monitor` keeps the *granted set* live (below) so a licence that gains or
+  loses a module takes effect on the next agent status — but what an app does
+  with a change (rebuild a route table, gray out a menu, force a 403) is the
+  app's decision.
 - **Where the gate applies.** REST/gRPC interceptors, consumer startup, the
-  NATS publisher allowlist, readiness.
+  NATS publisher allowlist, readiness. The SDK gives you `Licensed(code)` as
+  the per-module primitive; you decide which routes/consumers it guards.
 - **Fail-open policy.** How long boot waits for the agent, and what happens
-  when it never answers.
+  when it never answers. `Monitor` fails closed by default (see below); any
+  grace window or boot tolerance is yours to add.
+
+## Live entitlements: `Monitor`
+
+`ResolveModules` (below) is a pure snapshot of one token. To keep the granted
+module set *current* without reimplementing a stateful holder in every app, use
+a `Monitor`: it wraps a `Verifier`, re-verifies and re-resolves on **every**
+agent status it receives, and exposes live per-module checks from any goroutine.
+
+```go
+v, _ := license.NewVerifier(keys)                       // rotation-safe key set
+m := license.NewMonitor(v, license.VerifyConfig{ExpectedAud: "my-product"},
+    []string{"root", "identity", "audit"})              // core, always granted
+
+m.OnModuleChange(func(ev license.ModuleEvent) {
+    log.Info("granted modules changed", "added", ev.Added, "removed", ev.Removed)
+    // rebuild your /api/modules, publisher allowlist, route table here
+})
+
+go license.WatchAgentStatus(ctx, m, license.AgentClientConfig{
+    Address: "license-agent:6101",                      // node-local gRPC endpoint
+})
+```
+
+Reads are always current and race-safe:
+
+- `m.Licensed("retail")` — the per-module gate. A 403 middleware calls it per
+  request, so enforcement follows every transition (gain, loss, expiry) with
+  no restart.
+- `m.Codes()` / `m.Set()` — the modules usable *this instant* (core plus
+  currently-valid paid), for readiness probes and `/api/modules`-style surfaces.
+- `m.Valid()` — whole-token validity, recomputed on every read (exp/nbf).
+  Core stays `Licensed` regardless; paid modules are not.
+- `m.Resolution()` — the raw resolution (including `Filtered`), reflecting the
+  license rather than the instant.
+- `m.Claims()` / `m.Err()` — last verified claims / last apply error, for
+  diagnostics.
+- `OnModuleChange` fires only when the paid set actually changes — the first
+  successful status reports the whole set as `Added`.
+
+**`Monitor` is the enforcement answer, not the policy source.** It fails
+closed: a token that fails verification (including an expired online lease)
+immediately drops the paid modules, clears `Valid`, and clears `Claims`. There
+is no grace period and no fail-open inside the monitor — by design. Whether a
+consumer honors a grace window, waits at boot for the agent, or keeps serving
+core while the license is invalid is app policy (see "What the app owns").
+
+**What this means for a consumer** (inbrokeros-* and any future app):
+
+> **license-sdk-go is gaining a live entitlement `Monitor`.** Today the SDK
+> hands you a one-shot chain — `Verify → claims.ResolveModules()` — which is
+> why you freeze the module set at boot and build everything from that
+> snapshot. The agent's status stream already pushes a fresh token on every
+> change (including a module-only reissue), but nothing SDK-side held the
+> *current* resolution, detected module deltas, or offered a per-module check.
+>
+> The update adds to the SDK (no proto change, no wire change —
+> `AgentStatus.RawToken` already carries everything):
+>
+> - `Monitor` — a concurrency-safe holder of the current entitlement set.
+>   `ApplyStatus` verifies and re-resolves on **every** push, so "current
+>   modules" is always live, never a boot artifact.
+> - `Licensed(code)` — the per-module 403 primitive, evaluated against the
+>   current set → transition-scoped per-module enforcement.
+> - `Codes()` / `Set()` / `Resolution()` — live snapshots for `/api/modules`,
+>   publisher allowlists, route mounting.
+> - `OnModuleChange(ModuleEvent{added, removed, unchanged})` — fires on module
+>   deltas regardless of licence *state*, closing the hole where a module
+>   change while state stays `active` was silent.
+> - `WatchAgentStatus(ctx, addr, monitor)` — dial/backoff/recv loop feeding
+>   the monitor, so you stop rewriting reconnect logic.
+>
+> **What you get from adopting it:** `/api/modules` stops being a boot-frozen
+> list; the publisher allowlist can rebuild on `OnModuleChange`; your HTTP
+> middleware can 403 per module live; the backend can emit a broadcast that
+> carries the module set so the FE gate refreshes without a manual reset.
+>
+> **What it deliberately does NOT change for you:** mounting/unmounting route
+> trees, NATS consumers and publisher scopes stays app-owned — the SDK makes
+> the *data* live so you *can* react, it does not hot-swap your modules.
+> Grace/fail-open stays your policy too. A browser FE can't use the Go SDK
+> directly, so its half (reset the gate on broadcast, drop duplicate module
+> lists) remains FE-side work driven by whatever your backend serves.
+>
+> Net: the SDK stops *forcing* the freeze. Whether inbrokeros-* actually stops
+> freezing is now a wiring decision in those repos.
 
 ## Entitlements: `ResolveModules`
 
