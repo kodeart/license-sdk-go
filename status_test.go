@@ -3,11 +3,13 @@ package license
 import (
 	"crypto/ed25519"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"net"
 	"sync"
 	"testing"
 	"time"
+
+	licensev1 "github.com/kodeart/license-sdk-go/proto/license/v1"
+	"google.golang.org/grpc"
 )
 
 // agentStatus builds a signed license token plus the agent status that serves it.
@@ -164,23 +166,41 @@ func TestAgentStatus_VerifyOnline_LeaseForOtherLicense(t *testing.T) {
 	}
 }
 
-func TestFetchAgentStatus(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/status" {
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(AgentStatus{
-			DeploymentID: "dep-1",
-			HasLicense:   true,
-			Valid:        true,
-			RawToken:     "a.b.c",
-		})
-	}))
-	defer srv.Close()
+// fakeAgentServer streams one status on Watch, mimicking the agent pushing the
+// current status immediately on connect.
+type fakeAgentServer struct {
+	licensev1.UnimplementedLicenseAgentServer
+	status *licensev1.AgentStatus
+}
 
-	st, err := FetchAgentStatus(srv.URL)
+func (s *fakeAgentServer) Watch(_ *licensev1.WatchRequest, stream grpc.ServerStreamingServer[licensev1.AgentStatus]) error {
+	return stream.Send(s.status)
+}
+
+// startFakeAgent serves a fake LicenseAgent on a loopback port and returns its
+// host:port address.
+func startFakeAgent(t *testing.T, status *licensev1.AgentStatus) string {
+	t.Helper()
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	licensev1.RegisterLicenseAgentServer(srv, &fakeAgentServer{status: status})
+	go func() { _ = srv.Serve(lis) }()
+	t.Cleanup(srv.Stop)
+	return lis.Addr().String()
+}
+
+func TestFetchAgentStatus(t *testing.T) {
+	addr := startFakeAgent(t, &licensev1.AgentStatus{
+		DeploymentId: "dep-1",
+		HasLicense:   true,
+		Valid:        true,
+		RawToken:     "a.b.c",
+	})
+
+	st, err := FetchAgentStatus(addr)
 	if err != nil {
 		t.Fatalf("FetchAgentStatus: %v", err)
 	}
@@ -189,14 +209,16 @@ func TestFetchAgentStatus(t *testing.T) {
 	}
 }
 
-func TestFetchAgentStatus_ServerError(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer srv.Close()
+func TestFetchAgentStatus_Unreachable(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	addr := lis.Addr().String()
+	_ = lis.Close()
 
-	if _, err := FetchAgentStatus(srv.URL); err == nil {
-		t.Fatal("expected an error on a non-200 response")
+	if _, err := FetchAgentStatus(addr); err == nil {
+		t.Fatal("expected an error for an unreachable agent")
 	}
 }
 

@@ -20,7 +20,7 @@ themselves:
 license-server ──issues token──► license-agent (one per node)
                                      │ heartbeat, CRL, activation
                                      ▼
-                                /status on 127.0.0.1:6100
+                                gRPC Watch on 127.0.0.1:6101
                                      │
                                      ▼
                               app replicas (verify locally)
@@ -66,7 +66,7 @@ func newVerifier() (*license.Verifier, error) {
 
 // entitlements returns the paid modules this replica may expose.
 func entitlements(v *license.Verifier) (map[string]bool, error) {
-    st, err := license.FetchAgentStatus(license.DefaultAgentAddr) // 127.0.0.1:6100
+    st, err := license.FetchAgentStatus(license.DefaultAgentAddr) // 127.0.0.1:6101
     if err != nil {
         return nil, fmt.Errorf("license agent unreachable: %w", err)
     }
@@ -330,7 +330,7 @@ claims, err := v.VerifyAgentStatus(*st, license.VerifyConfig{ExpectedAud: "my-pr
 key set, which is what the agent and simple single-consumer tools want:
 
 ```go
-st, err := license.FetchAgentStatus("http://127.0.0.1:6100")
+st, err := license.FetchAgentStatus("127.0.0.1:6101")
 claims, err := st.Verify(license.VerifyConfig{ExpectedAud: "my-product"})
 ```
 

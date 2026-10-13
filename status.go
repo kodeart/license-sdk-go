@@ -1,20 +1,19 @@
 package license
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 )
 
-// DefaultAgentAddr is where the license-agent serves its local status endpoint.
-const DefaultAgentAddr = "http://127.0.0.1:6100"
+// DefaultAgentAddr is where the license-agent serves its local gRPC endpoint
+// (LICENSE_AGENT_GRPC_LISTEN).
+const DefaultAgentAddr = "127.0.0.1:6101"
 
-// AgentStatus is the payload the license-agent serves on its local HTTP
-// endpoint (/ and /status), summarizing the license cached on that node. App
-// replicas read it instead of talking to the license-server directly, so a
-// replica needs no credentials and works while the network is down.
+// AgentStatus is the payload the license-agent serves over its local gRPC
+// Watch stream, summarizing the license cached on that node. App replicas read
+// it instead of talking to the license-server directly, so a replica needs no
+// credentials and works while the network is down.
 //
 // This type is defined here, not in the agent, so both sides of the wire share
 // one declaration: the agent marshals it and the app unmarshals it.
@@ -78,24 +77,34 @@ const (
 	ReasonLeaseMismatch = "online_lease_mismatch"
 )
 
-// FetchAgentStatus GETs the agent's status endpoint. Both / and /status serve
-// the same payload; /status is used as the more explicit of the two.
+// FetchAgentStatus dials the agent's local gRPC endpoint and returns the
+// current status. It is a one-shot passive read: it opens the Watch stream,
+// takes the status the agent pushes immediately on connect, then closes. It
+// does not call Refresh, so it never forces a network round-trip to the
+// license-server and works while the network is down.
+//
+// addr is a gRPC host:port (e.g. "127.0.0.1:6101"); use DefaultAgentAddr for
+// the node-local default.
 func FetchAgentStatus(addr string) (*AgentStatus, error) {
-	resp, err := http.Get(addr + "/status")
+	const timeout = 3 * time.Second
+
+	client, err := NewAgentClient(AgentClientConfig{Address: addr, ConnectTimeout: timeout})
 	if err != nil {
 		return nil, fmt.Errorf("license sdk: fetch agent status: %w", err)
 	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("license sdk: agent status: %s", resp.Status)
-	}
-	body, err := io.ReadAll(resp.Body)
+	defer func() { _ = client.Close() }()
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	stream, err := client.Watch(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("license sdk: read agent status: %w", err)
+		return nil, fmt.Errorf("license sdk: fetch agent status: %w", err)
 	}
-	var st AgentStatus
-	if err := json.Unmarshal(body, &st); err != nil {
-		return nil, fmt.Errorf("license sdk: parse agent status: %w", err)
+
+	st, err := stream.Recv()
+	if err != nil {
+		return nil, fmt.Errorf("license sdk: fetch agent status: %w", err)
 	}
 	return &st, nil
 }
