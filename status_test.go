@@ -324,6 +324,61 @@ func TestVerifier_NoKeysIsAnError(t *testing.T) {
 	}
 }
 
+// TestVerifier_MultiKeyRejectsUnknownKidDespiteDefault pins the strict-routing
+// rule: once named keys are installed, an unknown kid must NOT be checked
+// against the default key. Regression guard for the mixed configuration where
+// a process set both a default key and a named key set.
+func TestVerifier_MultiKeyRejectsUnknownKidDespiteDefault(t *testing.T) {
+	namedPub, _, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	defPub, defPriv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+
+	v := &Verifier{}
+	v.SetKeys(map[string]ed25519.PublicKey{"sk_named": namedPub})
+	v.SetDefaultKey(defPub)
+
+	// A token signed by the default key but stamped with a kid the set does
+	// not know must be rejected — otherwise a rotated token is trusted.
+	rogue := signJWS(t, defPriv, "sk_rogue", LicenseClaims{
+		JTI: "rogue",
+		EXP: time.Now().Add(time.Hour).UnixMilli(),
+	})
+	if _, err := v.VerifyLicenseToken(rogue); err == nil {
+		t.Fatal("unknown kid must be rejected when named keys are installed")
+	}
+}
+
+// TestVerifier_MultiKeyKidlessUsesDefault verifies the one case where the
+// default key still answers after named keys are installed: a token carrying
+// no kid at all.
+func TestVerifier_MultiKeyKidlessUsesDefault(t *testing.T) {
+	namedPub, _, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+	defPub, defPriv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatalf("generate key: %v", err)
+	}
+
+	v := &Verifier{}
+	v.SetKeys(map[string]ed25519.PublicKey{"sk_named": namedPub})
+	v.SetDefaultKey(defPub)
+
+	token := signJWS(t, defPriv, "", LicenseClaims{
+		JTI: "kidless",
+		EXP: time.Now().Add(time.Hour).UnixMilli(),
+	})
+	if _, err := v.VerifyLicenseToken(token); err != nil {
+		t.Fatalf("kid-less token should verify against the default key: %v", err)
+	}
+}
+
 func TestAgentStatus_JSONRoundTrip(t *testing.T) {
 	// The wire shape is the contract between the agent and app replicas; a
 	// renamed field silently breaks every consumer.

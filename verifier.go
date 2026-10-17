@@ -55,8 +55,11 @@ func (v *Verifier) AddKey(kid string, pk ed25519.PublicKey) {
 }
 
 // SetDefaultKey installs the fallback key used for tokens with no "kid"
-// header. It is also the fallback for a kid the key set does not contain,
-// which keeps single-key callers working after the server starts stamping kid.
+// header (kid ""). It is also the fallback for any kid when no named key set
+// is installed — that is what keeps single-key callers working after the
+// server starts stamping kid. Once named keys are installed with SetKeys, the
+// set is authoritative and an unknown kid is rejected rather than checked
+// against this key.
 func (v *Verifier) SetDefaultKey(pk ed25519.PublicKey) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
@@ -66,19 +69,30 @@ func (v *Verifier) SetDefaultKey(pk ed25519.PublicKey) {
 // lookup resolves the public key for a JWS kid header.
 //
 //   - A kid present in the key set is used.
-//   - A single default key (SetDefaultKey / SetPublicKey) is the fallback for
-//     any kid: one key means "this one key verifies everything it signs", so
-//     existing single-key callers keep working once the server stamps kid.
-//   - A strict multi-key set rejects unknown kids, so a rotated token is never
-//     checked against the wrong key.
+//   - With no named keys installed (single-key mode), the default key is the
+//     fallback for any kid: one key means "this one key verifies everything it
+//     signs", so single-key callers keep working once the server stamps kid.
+//   - With named keys installed, the set is authoritative: an unknown kid is
+//     rejected, so a rotated token is never checked against the wrong key. The
+//     default key still answers a token that carries no kid header.
 func (v *Verifier) lookup(kid string) (ed25519.PublicKey, error) {
 	v.mu.RLock()
 	defer v.mu.RUnlock()
-	if kid != "" && len(v.keys) > 0 {
+
+	if kid != "" {
 		if pk, ok := v.keys[kid]; ok {
 			return pk, nil
 		}
+		// An installed key set is authoritative: never fall through to the
+		// default for an unknown kid.
+		if len(v.keys) > 0 {
+			return nil, fmt.Errorf("license sdk: unknown key id %q", kid)
+		}
+	} else if pk, ok := v.keys[""]; ok {
+		// No kid header: an explicitly kid-less key is the fallback.
+		return pk, nil
 	}
+
 	if len(v.def) == ed25519.PublicKeySize {
 		return v.def, nil
 	}

@@ -42,11 +42,12 @@ type Monitor struct {
 	coreList []string
 	coreSet  map[string]struct{}
 
-	mu      sync.RWMutex
-	claims  *LicenseClaims    // last successfully verified claims; nil before any success or after a failure
-	res     ModuleResolution  // last successful resolution
-	lastErr error             // error from the most recent ApplyStatus, if any
-	change  func(ModuleEvent) // invoked outside the lock, only when the module set changed
+	mu       sync.RWMutex
+	claims   *LicenseClaims    // last successfully verified claims; nil before any success or after a failure
+	leaseExp int64             // exp (ms) of the last verified online lease; 0 when none is required
+	res      ModuleResolution  // last successful resolution
+	lastErr  error             // error from the most recent ApplyStatus, if any
+	change   func(ModuleEvent) // invoked outside the lock, only when the module set changed
 }
 
 // NewMonitor wraps a Verifier (which owns the public keyring) into a live
@@ -81,12 +82,13 @@ func NewMonitor(v *Verifier, cfg VerifyConfig, coreCodes []string) *Monitor {
 // The verification error is returned to the caller and available later via
 // Err, so a Watch loop can log it without aborting the stream.
 func (m *Monitor) ApplyStatus(st AgentStatus) (ModuleEvent, error) {
-	claims, err := m.v.VerifyAgentStatusOnline(st, m.cfg)
+	claims, lease, err := m.v.verifyAgentStatusOnlineAt(st, m.cfg, time.Now())
 
 	m.mu.Lock()
 	m.lastErr = err
 	if err != nil {
 		m.claims = nil
+		m.leaseExp = 0
 		m.res = ModuleResolution{}
 		m.mu.Unlock()
 		return ModuleEvent{}, err
@@ -94,6 +96,10 @@ func (m *Monitor) ApplyStatus(st AgentStatus) (ModuleEvent, error) {
 	res := claims.ResolveModules()
 	ev := diffModuleSets(m.res.Codes, res.Codes)
 	m.claims = claims
+	m.leaseExp = 0
+	if lease != nil {
+		m.leaseExp = lease.EXP
+	}
 	m.res = res
 	cb := m.change
 	m.mu.Unlock()
@@ -116,7 +122,14 @@ func (m *Monitor) Valid() bool {
 }
 
 func (m *Monitor) validLocked(now time.Time) bool {
-	return m.claims != nil && checkTime(m.claims.EXP, m.claims.NBF, now) == nil
+	if m.claims == nil || checkTime(m.claims.EXP, m.claims.NBF, now) != nil {
+		return false
+	}
+	// Re-check the online lease on every read, not just when a status arrives:
+	// once the lease lapses the entitlement is gone even if the license token
+	// itself is still within its validity window. leaseExp == 0 means the
+	// license requires no lease, which checkTime treats as unconstrained.
+	return checkTime(m.leaseExp, 0, now) == nil
 }
 
 // Licensed is the per-module enforcement primitive: a core code is always
@@ -239,17 +252,31 @@ func WatchAgentStatus(ctx context.Context, m *Monitor, cfg AgentClientConfig) er
 			delay = min(2*delay, backoffMax)
 			continue
 		}
-		delay = backoffStart
+
+		// Drain the stream until it breaks, then reconnect. A stream that ends
+		// after delivering at least one status was healthy, so the backoff is
+		// reset; one that breaks immediately grows it. Sleeping before every
+		// reconnect is what stops a server that accepts then drops the stream
+		// from spinning this loop, since Watch() itself succeeds in that case.
+		healthy := false
 		for {
 			st, err := stream.Recv()
 			if err != nil {
-				if ctx.Err() != nil {
-					return ctx.Err()
-				}
 				break
 			}
 			_, _ = m.ApplyStatus(st) // failure is recorded on the monitor via Err
+			healthy = true
 		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if healthy {
+			delay = backoffStart
+		}
+		if !sleepCtx(ctx, delay) {
+			return ctx.Err()
+		}
+		delay = min(2*delay, backoffMax)
 	}
 	return ctx.Err()
 }

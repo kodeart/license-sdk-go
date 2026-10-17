@@ -1,10 +1,16 @@
 package license
 
 import (
+	"context"
 	"crypto/ed25519"
+	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	licensev1 "github.com/kodeart/license-sdk-go/proto/license/v1"
+	"google.golang.org/grpc"
 )
 
 // newTestVerifier returns a Verifier over a freshly generated key.
@@ -34,6 +40,37 @@ func licenseStatus(t *testing.T, priv ed25519.PrivateKey, dep string, exp time.T
 	claims.JTI = "jti-" + dep + "-" + exp.Format("150405")
 	token := signJWS(t, priv, "kid-1", claims)
 	return AgentStatus{DeploymentID: dep, HasLicense: true, Valid: true, RawToken: token}
+}
+
+// leaseStatus builds an AgentStatus carrying a token that requires an online
+// lease, along with a lease token expiring at leaseExp.
+func leaseStatus(t *testing.T, priv ed25519.PrivateKey, dep string, licExp, leaseExp time.Time, modules []ModuleEntry) AgentStatus {
+	t.Helper()
+	claims := LicenseClaims{
+		JTI:                "jti-" + dep,
+		Aud:                "my-product",
+		Dep:                dep,
+		TenantModel:        "single",
+		LicensingModel:     "module_based",
+		EXP:                licExp.UnixMilli(),
+		RequireOnlineLease: 1,
+		Modules:            modules,
+	}
+	token := signJWS(t, priv, "kid-1", claims)
+	lease := LeaseClaims{
+		Sub:        claims.JTI,
+		JTI:        "lease-" + dep,
+		EXP:        leaseExp.UnixMilli(),
+		DepID:      dep,
+		LicenseJTI: claims.JTI,
+	}
+	return AgentStatus{
+		DeploymentID: dep,
+		HasLicense:   true,
+		Valid:        true,
+		RawToken:     token,
+		LeaseToken:   signJWS(t, priv, "kid-1", lease),
+	}
 }
 
 func TestMonitor_GainLossFiresModuleEvent(t *testing.T) {
@@ -184,6 +221,42 @@ func TestMonitor_ExpiryFlipsLivenessWithoutNewStatus(t *testing.T) {
 	}
 }
 
+func TestMonitor_LeaseExpiryFlipsLivenessWithoutNewStatus(t *testing.T) {
+	v, priv := newTestVerifier(t)
+	m := NewMonitor(v, VerifyConfig{ExpectedAud: "my-product"}, []string{"core"})
+
+	licExp := time.Now().Add(24 * time.Hour)
+	// The lease lapses ~1s after apply, inside the clock-skew window, so it
+	// verifies now but expires while the monitor holds the same status.
+	leaseExp := time.Now().Add(-clockSkew + time.Second)
+	if _, err := m.ApplyStatus(leaseStatus(t, priv, "dep-a", licExp, leaseExp, []ModuleEntry{{Code: "root"}})); err != nil {
+		t.Fatalf("apply live-lease status: %v", err)
+	}
+	if !m.Licensed("root") {
+		t.Fatal("Licensed(root) should be true while the lease is live")
+	}
+
+	// Wait past leaseExp+skew: liveness must flip without an ApplyStatus call.
+	time.Sleep(time.Second)
+	if m.Licensed("root") {
+		t.Error("Licensed(root) = true after the lease lapsed — the lease must be re-checked on read")
+	}
+	if m.Valid() {
+		t.Error("Valid() = true after the lease lapsed")
+	}
+	if s := m.Set(); len(s) != 1 || !s["core"] {
+		t.Errorf("Set()=%v, want exactly {core} after the lease lapsed", s)
+	}
+
+	// A fresh status carrying a renewed lease restores entitlement.
+	if _, err := m.ApplyStatus(leaseStatus(t, priv, "dep-a", licExp, time.Now().Add(5*time.Minute), []ModuleEntry{{Code: "root"}})); err != nil {
+		t.Fatalf("apply renewed lease: %v", err)
+	}
+	if !m.Licensed("root") {
+		t.Error("Licensed(root) = false after a renewed lease — entitlement must recover")
+	}
+}
+
 func TestMonitor_CoreAlwaysAndResolution(t *testing.T) {
 	v, priv := newTestVerifier(t)
 	m := NewMonitor(v, VerifyConfig{}, []string{"core-a", "core-b"})
@@ -216,6 +289,58 @@ func TestMonitor_CoreAlwaysAndResolution(t *testing.T) {
 	}
 	if !sameStrings(res.Filtered, []string{"orphan"}) {
 		t.Errorf("Resolution.Filtered=%v, want [orphan]", res.Filtered)
+	}
+}
+
+// countingAgentServer accepts a Watch stream, counts the connect, and ends the
+// stream immediately without sending anything — the "accept then drop" server
+// that used to spin WatchAgentStatus with no delay.
+type countingAgentServer struct {
+	licensev1.UnimplementedLicenseAgentServer
+	calls atomic.Int64
+}
+
+func (s *countingAgentServer) Watch(_ *licensev1.WatchRequest, stream grpc.ServerStreamingServer[licensev1.AgentStatus]) error {
+	s.calls.Add(1)
+	return nil
+}
+
+func TestWatchAgentStatus_BacksOffWhenStreamEndsImmediately(t *testing.T) {
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	srv := grpc.NewServer()
+	fake := &countingAgentServer{}
+	licensev1.RegisterLicenseAgentServer(srv, fake)
+	go func() { _ = srv.Serve(lis) }()
+	t.Cleanup(srv.Stop)
+
+	v, _ := newTestVerifier(t)
+	m := NewMonitor(v, VerifyConfig{}, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = WatchAgentStatus(ctx, m, AgentClientConfig{Address: lis.Addr().String()})
+	}()
+
+	// Let the loop run long enough that an unthrottled reconnect storm would
+	// issue thousands of calls, then stop it.
+	time.Sleep(1200 * time.Millisecond)
+	cancel()
+	<-done
+
+	n := fake.calls.Load()
+	if n == 0 {
+		t.Fatal("expected at least one Watch call")
+	}
+	// With exponential backoff (500ms, 1s, 2s, ...) ~1.2s admits only a handful
+	// of attempts. The bound is generous to stay non-flaky on slow CI while
+	// still failing loudly if the sleep is ever dropped again.
+	if n > 10 {
+		t.Fatalf("Watch called %d times in ~1.2s; reconnect loop is not backing off", n)
 	}
 }
 

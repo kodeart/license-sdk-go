@@ -57,3 +57,68 @@ func (c *Client) FetchLicense(ctx context.Context, deploymentID string) (*licens
 		DeploymentId: deploymentID,
 	})
 }
+
+// DeploymentAuditOptions narrows a deployment audit read. The zero value asks
+// for the default page of the node's own history, newest first.
+type DeploymentAuditOptions struct {
+	Limit int32
+	Page  int32
+	// From/To bound created_at, both inclusive, in unix milliseconds.
+	From int64
+	To   int64
+}
+
+// DeploymentAuditEntry is one entry from the deployment's own trail.
+type DeploymentAuditEntry struct {
+	ID         string
+	Action     string
+	Outcome    string
+	TargetKind string
+	TargetID   string
+	// TargetLabel is the human value the server captured when the entry was
+	// written, so it is safe to show a user directly.
+	TargetLabel string
+	// Detail is the raw JSON string as recorded. It is returned verbatim rather
+	// than decoded so a caller can read the `changes` map — always
+	// {field: {from, to}} — and apply one renderer to every action.
+	Detail    string
+	CreatedAt int64
+}
+
+// GetDeploymentAudit returns the audit trail for the deployment this client
+// authenticates as.
+//
+// The scope is fixed by the x-deployment-api-key credential: there is no
+// deployment parameter, and the server pins the query to the calling
+// deployment's own entries. A node therefore gets its licensing history — its
+// activation, reissue deliveries, revocations and fingerprint mismatches — and
+// can never read another deployment's, a client's or a partner's activity.
+//
+// Only decisions are recorded. The heartbeats, license fetches, usage reports and
+// CRL polls a node also performs are not audit events and do not appear, because
+// they record that a request was served rather than that anything happened.
+func (c *Client) GetDeploymentAudit(ctx context.Context, opts DeploymentAuditOptions) ([]DeploymentAuditEntry, int32, error) {
+	resp, err := c.svc.GetDeploymentAudit(c.ctxWithDeploymentKey(ctx), &licensev1.GetDeploymentAuditRequest{
+		Limit: opts.Limit,
+		Page:  opts.Page,
+		From:  opts.From,
+		To:    opts.To,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	out := make([]DeploymentAuditEntry, 0, len(resp.GetEntries()))
+	for _, e := range resp.GetEntries() {
+		out = append(out, DeploymentAuditEntry{
+			ID:          e.GetId(),
+			Action:      e.GetAction(),
+			Outcome:     e.GetOutcome(),
+			TargetKind:  e.GetTargetKind(),
+			TargetID:    e.GetTargetId(),
+			TargetLabel: e.GetTargetLabel(),
+			Detail:      e.GetDetail(),
+			CreatedAt:   e.GetCreatedAt(),
+		})
+	}
+	return out, resp.GetTotal(), nil
+}

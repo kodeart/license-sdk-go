@@ -29,12 +29,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	LicenseService_Heartbeat_FullMethodName      = "/license.v1.LicenseService/Heartbeat"
-	LicenseService_GetCRL_FullMethodName         = "/license.v1.LicenseService/GetCRL"
-	LicenseService_ReportUsage_FullMethodName    = "/license.v1.LicenseService/ReportUsage"
-	LicenseService_FetchLicense_FullMethodName   = "/license.v1.LicenseService/FetchLicense"
-	LicenseService_GetSigningKeys_FullMethodName = "/license.v1.LicenseService/GetSigningKeys"
-	LicenseService_Activate_FullMethodName       = "/license.v1.LicenseService/Activate"
+	LicenseService_Heartbeat_FullMethodName          = "/license.v1.LicenseService/Heartbeat"
+	LicenseService_GetCRL_FullMethodName             = "/license.v1.LicenseService/GetCRL"
+	LicenseService_ReportUsage_FullMethodName        = "/license.v1.LicenseService/ReportUsage"
+	LicenseService_GetDeploymentAudit_FullMethodName = "/license.v1.LicenseService/GetDeploymentAudit"
+	LicenseService_FetchLicense_FullMethodName       = "/license.v1.LicenseService/FetchLicense"
+	LicenseService_GetSigningKeys_FullMethodName     = "/license.v1.LicenseService/GetSigningKeys"
+	LicenseService_Activate_FullMethodName           = "/license.v1.LicenseService/Activate"
 )
 
 // LicenseServiceClient is the client API for LicenseService service.
@@ -50,6 +51,9 @@ type LicenseServiceClient interface {
 	GetCRL(ctx context.Context, in *GetCRLRequest, opts ...grpc.CallOption) (*GetCRLResponse, error)
 	// ReportUsage records hourly usage metrics for a deployment.
 	ReportUsage(ctx context.Context, in *ReportUsageRequest, opts ...grpc.CallOption) (*ReportUsageResponse, error)
+	// GetDeploymentAudit returns the audit entries recorded for the calling
+	// deployment only, so a node can explain its own licensing history.
+	GetDeploymentAudit(ctx context.Context, in *GetDeploymentAuditRequest, opts ...grpc.CallOption) (*GetDeploymentAuditResponse, error)
 	// FetchLicense returns the licenses bound to a deployment (or a specific
 	// license) as signed license tokens the agent can validate locally.
 	FetchLicense(ctx context.Context, in *FetchLicenseRequest, opts ...grpc.CallOption) (*FetchLicenseResponse, error)
@@ -101,6 +105,16 @@ func (c *licenseServiceClient) ReportUsage(ctx context.Context, in *ReportUsageR
 	return out, nil
 }
 
+func (c *licenseServiceClient) GetDeploymentAudit(ctx context.Context, in *GetDeploymentAuditRequest, opts ...grpc.CallOption) (*GetDeploymentAuditResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDeploymentAuditResponse)
+	err := c.cc.Invoke(ctx, LicenseService_GetDeploymentAudit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *licenseServiceClient) FetchLicense(ctx context.Context, in *FetchLicenseRequest, opts ...grpc.CallOption) (*FetchLicenseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FetchLicenseResponse)
@@ -144,6 +158,9 @@ type LicenseServiceServer interface {
 	GetCRL(context.Context, *GetCRLRequest) (*GetCRLResponse, error)
 	// ReportUsage records hourly usage metrics for a deployment.
 	ReportUsage(context.Context, *ReportUsageRequest) (*ReportUsageResponse, error)
+	// GetDeploymentAudit returns the audit entries recorded for the calling
+	// deployment only, so a node can explain its own licensing history.
+	GetDeploymentAudit(context.Context, *GetDeploymentAuditRequest) (*GetDeploymentAuditResponse, error)
 	// FetchLicense returns the licenses bound to a deployment (or a specific
 	// license) as signed license tokens the agent can validate locally.
 	FetchLicense(context.Context, *FetchLicenseRequest) (*FetchLicenseResponse, error)
@@ -173,6 +190,9 @@ func (UnimplementedLicenseServiceServer) GetCRL(context.Context, *GetCRLRequest)
 }
 func (UnimplementedLicenseServiceServer) ReportUsage(context.Context, *ReportUsageRequest) (*ReportUsageResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportUsage not implemented")
+}
+func (UnimplementedLicenseServiceServer) GetDeploymentAudit(context.Context, *GetDeploymentAuditRequest) (*GetDeploymentAuditResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDeploymentAudit not implemented")
 }
 func (UnimplementedLicenseServiceServer) FetchLicense(context.Context, *FetchLicenseRequest) (*FetchLicenseResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FetchLicense not implemented")
@@ -258,6 +278,24 @@ func _LicenseService_ReportUsage_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LicenseService_GetDeploymentAudit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDeploymentAuditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LicenseServiceServer).GetDeploymentAudit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LicenseService_GetDeploymentAudit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LicenseServiceServer).GetDeploymentAudit(ctx, req.(*GetDeploymentAuditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _LicenseService_FetchLicense_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FetchLicenseRequest)
 	if err := dec(in); err != nil {
@@ -332,6 +370,10 @@ var LicenseService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _LicenseService_ReportUsage_Handler,
 		},
 		{
+			MethodName: "GetDeploymentAudit",
+			Handler:    _LicenseService_GetDeploymentAudit_Handler,
+		},
+		{
 			MethodName: "FetchLicense",
 			Handler:    _LicenseService_FetchLicense_Handler,
 		},
@@ -349,41 +391,43 @@ var LicenseService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AdminService_CreateTenant_FullMethodName            = "/license.v1.AdminService/CreateTenant"
-	AdminService_GetTenant_FullMethodName               = "/license.v1.AdminService/GetTenant"
-	AdminService_ListTenants_FullMethodName             = "/license.v1.AdminService/ListTenants"
-	AdminService_UpdateTenant_FullMethodName            = "/license.v1.AdminService/UpdateTenant"
-	AdminService_CreateReseller_FullMethodName          = "/license.v1.AdminService/CreateReseller"
-	AdminService_ListResellers_FullMethodName           = "/license.v1.AdminService/ListResellers"
-	AdminService_ListRegions_FullMethodName             = "/license.v1.AdminService/ListRegions"
-	AdminService_UpdateReseller_FullMethodName          = "/license.v1.AdminService/UpdateReseller"
-	AdminService_CreateResellerQuota_FullMethodName     = "/license.v1.AdminService/CreateResellerQuota"
-	AdminService_ListResellerQuotas_FullMethodName      = "/license.v1.AdminService/ListResellerQuotas"
-	AdminService_CreateProduct_FullMethodName           = "/license.v1.AdminService/CreateProduct"
-	AdminService_GetProduct_FullMethodName              = "/license.v1.AdminService/GetProduct"
-	AdminService_ListProducts_FullMethodName            = "/license.v1.AdminService/ListProducts"
-	AdminService_UpdateProduct_FullMethodName           = "/license.v1.AdminService/UpdateProduct"
-	AdminService_UpsertProductModules_FullMethodName    = "/license.v1.AdminService/UpsertProductModules"
-	AdminService_GetProductModuleCatalog_FullMethodName = "/license.v1.AdminService/GetProductModuleCatalog"
-	AdminService_IssueLicense_FullMethodName            = "/license.v1.AdminService/IssueLicense"
-	AdminService_ReissueLicense_FullMethodName          = "/license.v1.AdminService/ReissueLicense"
-	AdminService_RevokeLicense_FullMethodName           = "/license.v1.AdminService/RevokeLicense"
-	AdminService_ResumeLicense_FullMethodName           = "/license.v1.AdminService/ResumeLicense"
-	AdminService_GetLicense_FullMethodName              = "/license.v1.AdminService/GetLicense"
-	AdminService_ListLicenses_FullMethodName            = "/license.v1.AdminService/ListLicenses"
-	AdminService_GetLicenseVersions_FullMethodName      = "/license.v1.AdminService/GetLicenseVersions"
-	AdminService_ListDeployments_FullMethodName         = "/license.v1.AdminService/ListDeployments"
-	AdminService_GetDeployment_FullMethodName           = "/license.v1.AdminService/GetDeployment"
-	AdminService_CreateActivationCode_FullMethodName    = "/license.v1.AdminService/CreateActivationCode"
-	AdminService_ListActivationCodes_FullMethodName     = "/license.v1.AdminService/ListActivationCodes"
-	AdminService_RotateSigningKey_FullMethodName        = "/license.v1.AdminService/RotateSigningKey"
-	AdminService_ListSigningKeys_FullMethodName         = "/license.v1.AdminService/ListSigningKeys"
-	AdminService_GetAuditLog_FullMethodName             = "/license.v1.AdminService/GetAuditLog"
-	AdminService_VerifyAuditChain_FullMethodName        = "/license.v1.AdminService/VerifyAuditChain"
-	AdminService_OnSubscriptionUpdated_FullMethodName   = "/license.v1.AdminService/OnSubscriptionUpdated"
-	AdminService_OnSubscriptionCancelled_FullMethodName = "/license.v1.AdminService/OnSubscriptionCancelled"
-	AdminService_OnPaymentFailed_FullMethodName         = "/license.v1.AdminService/OnPaymentFailed"
-	AdminService_OnTrialStarted_FullMethodName          = "/license.v1.AdminService/OnTrialStarted"
+	AdminService_CreateTenant_FullMethodName                = "/license.v1.AdminService/CreateTenant"
+	AdminService_GetTenant_FullMethodName                   = "/license.v1.AdminService/GetTenant"
+	AdminService_ListTenants_FullMethodName                 = "/license.v1.AdminService/ListTenants"
+	AdminService_UpdateTenant_FullMethodName                = "/license.v1.AdminService/UpdateTenant"
+	AdminService_CreateReseller_FullMethodName              = "/license.v1.AdminService/CreateReseller"
+	AdminService_ListResellers_FullMethodName               = "/license.v1.AdminService/ListResellers"
+	AdminService_ListRegions_FullMethodName                 = "/license.v1.AdminService/ListRegions"
+	AdminService_UpdateReseller_FullMethodName              = "/license.v1.AdminService/UpdateReseller"
+	AdminService_CreateResellerQuota_FullMethodName         = "/license.v1.AdminService/CreateResellerQuota"
+	AdminService_ListResellerQuotas_FullMethodName          = "/license.v1.AdminService/ListResellerQuotas"
+	AdminService_CreateProduct_FullMethodName               = "/license.v1.AdminService/CreateProduct"
+	AdminService_GetProduct_FullMethodName                  = "/license.v1.AdminService/GetProduct"
+	AdminService_ListProducts_FullMethodName                = "/license.v1.AdminService/ListProducts"
+	AdminService_UpdateProduct_FullMethodName               = "/license.v1.AdminService/UpdateProduct"
+	AdminService_UpsertProductModules_FullMethodName        = "/license.v1.AdminService/UpsertProductModules"
+	AdminService_GetProductModuleCatalog_FullMethodName     = "/license.v1.AdminService/GetProductModuleCatalog"
+	AdminService_IssueLicense_FullMethodName                = "/license.v1.AdminService/IssueLicense"
+	AdminService_ReissueLicense_FullMethodName              = "/license.v1.AdminService/ReissueLicense"
+	AdminService_RevokeLicense_FullMethodName               = "/license.v1.AdminService/RevokeLicense"
+	AdminService_ResumeLicense_FullMethodName               = "/license.v1.AdminService/ResumeLicense"
+	AdminService_GetLicense_FullMethodName                  = "/license.v1.AdminService/GetLicense"
+	AdminService_ListLicenses_FullMethodName                = "/license.v1.AdminService/ListLicenses"
+	AdminService_GetLicenseVersions_FullMethodName          = "/license.v1.AdminService/GetLicenseVersions"
+	AdminService_ListDeployments_FullMethodName             = "/license.v1.AdminService/ListDeployments"
+	AdminService_GetDeployment_FullMethodName               = "/license.v1.AdminService/GetDeployment"
+	AdminService_CreateActivationCode_FullMethodName        = "/license.v1.AdminService/CreateActivationCode"
+	AdminService_ListActivationCodes_FullMethodName         = "/license.v1.AdminService/ListActivationCodes"
+	AdminService_RotateSigningKey_FullMethodName            = "/license.v1.AdminService/RotateSigningKey"
+	AdminService_ListSigningKeys_FullMethodName             = "/license.v1.AdminService/ListSigningKeys"
+	AdminService_RebindDeploymentFingerprint_FullMethodName = "/license.v1.AdminService/RebindDeploymentFingerprint"
+	AdminService_GetAuditLog_FullMethodName                 = "/license.v1.AdminService/GetAuditLog"
+	AdminService_ExportAuditLog_FullMethodName              = "/license.v1.AdminService/ExportAuditLog"
+	AdminService_VerifyAuditChain_FullMethodName            = "/license.v1.AdminService/VerifyAuditChain"
+	AdminService_OnSubscriptionUpdated_FullMethodName       = "/license.v1.AdminService/OnSubscriptionUpdated"
+	AdminService_OnSubscriptionCancelled_FullMethodName     = "/license.v1.AdminService/OnSubscriptionCancelled"
+	AdminService_OnPaymentFailed_FullMethodName             = "/license.v1.AdminService/OnPaymentFailed"
+	AdminService_OnTrialStarted_FullMethodName              = "/license.v1.AdminService/OnTrialStarted"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -425,7 +469,9 @@ type AdminServiceClient interface {
 	GetProductModuleCatalog(ctx context.Context, in *GetProductModuleCatalogRequest, opts ...grpc.CallOption) (*GetProductModuleCatalogResponse, error)
 	// IssueLicense issues a new license under a product and returns the signed token plus activation codes.
 	IssueLicense(ctx context.Context, in *IssueLicenseRequest, opts ...grpc.CallOption) (*IssueLicenseResponse, error)
-	// ReissueLicense mints a new JTI for an active license and adjusts its seats, max deployments, or expiry.
+	// ReissueLicense re-issues a license under a new version, adjusting seats, max
+	// deployments, validity window or terms. The JTI stays stable by design so
+	// issued tokens and audit history stay traceable across versions.
 	ReissueLicense(ctx context.Context, in *ReissueLicenseRequest, opts ...grpc.CallOption) (*ReissueLicenseResponse, error)
 	// RevokeLicense terminates a license immediately; revoked seats are reaped through the CRL.
 	RevokeLicense(ctx context.Context, in *RevokeLicenseRequest, opts ...grpc.CallOption) (*RevokeLicenseResponse, error)
@@ -452,8 +498,12 @@ type AdminServiceClient interface {
 	RotateSigningKey(ctx context.Context, in *RotateSigningKeyRequest, opts ...grpc.CallOption) (*RotateSigningKeyResponse, error)
 	// ListSigningKeys lists a product signing keys, newest first.
 	ListSigningKeys(ctx context.Context, in *ListSigningKeysRequest, opts ...grpc.CallOption) (*ListSigningKeysResponse, error)
+	// RebindDeploymentFingerprint points a deployment at a new machine id after an operator confirms a rebuild or clone.
+	RebindDeploymentFingerprint(ctx context.Context, in *RebindDeploymentFingerprintRequest, opts ...grpc.CallOption) (*RebindDeploymentFingerprintResponse, error)
 	// GetAuditLog pages the audit trail, optionally filtered by target type and id.
 	GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error)
+	// ExportAuditLog returns the whole filtered trail as one downloadable document, for handing to an auditor offline.
+	ExportAuditLog(ctx context.Context, in *ExportAuditLogRequest, opts ...grpc.CallOption) (*ExportAuditLogResponse, error)
 	// VerifyAuditChain recomputes the audit hash chain and reports whether the trail is intact.
 	VerifyAuditChain(ctx context.Context, in *VerifyAuditChainRequest, opts ...grpc.CallOption) (*VerifyAuditChainResponse, error)
 	// OnSubscriptionUpdated applies a billing subscription change (seats, expiry, modules; cancels short-circuit) to a license.
@@ -764,10 +814,30 @@ func (c *adminServiceClient) ListSigningKeys(ctx context.Context, in *ListSignin
 	return out, nil
 }
 
+func (c *adminServiceClient) RebindDeploymentFingerprint(ctx context.Context, in *RebindDeploymentFingerprintRequest, opts ...grpc.CallOption) (*RebindDeploymentFingerprintResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RebindDeploymentFingerprintResponse)
+	err := c.cc.Invoke(ctx, AdminService_RebindDeploymentFingerprint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *adminServiceClient) GetAuditLog(ctx context.Context, in *GetAuditLogRequest, opts ...grpc.CallOption) (*GetAuditLogResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAuditLogResponse)
 	err := c.cc.Invoke(ctx, AdminService_GetAuditLog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ExportAuditLog(ctx context.Context, in *ExportAuditLogRequest, opts ...grpc.CallOption) (*ExportAuditLogResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ExportAuditLogResponse)
+	err := c.cc.Invoke(ctx, AdminService_ExportAuditLog_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -863,7 +933,9 @@ type AdminServiceServer interface {
 	GetProductModuleCatalog(context.Context, *GetProductModuleCatalogRequest) (*GetProductModuleCatalogResponse, error)
 	// IssueLicense issues a new license under a product and returns the signed token plus activation codes.
 	IssueLicense(context.Context, *IssueLicenseRequest) (*IssueLicenseResponse, error)
-	// ReissueLicense mints a new JTI for an active license and adjusts its seats, max deployments, or expiry.
+	// ReissueLicense re-issues a license under a new version, adjusting seats, max
+	// deployments, validity window or terms. The JTI stays stable by design so
+	// issued tokens and audit history stay traceable across versions.
 	ReissueLicense(context.Context, *ReissueLicenseRequest) (*ReissueLicenseResponse, error)
 	// RevokeLicense terminates a license immediately; revoked seats are reaped through the CRL.
 	RevokeLicense(context.Context, *RevokeLicenseRequest) (*RevokeLicenseResponse, error)
@@ -890,8 +962,12 @@ type AdminServiceServer interface {
 	RotateSigningKey(context.Context, *RotateSigningKeyRequest) (*RotateSigningKeyResponse, error)
 	// ListSigningKeys lists a product signing keys, newest first.
 	ListSigningKeys(context.Context, *ListSigningKeysRequest) (*ListSigningKeysResponse, error)
+	// RebindDeploymentFingerprint points a deployment at a new machine id after an operator confirms a rebuild or clone.
+	RebindDeploymentFingerprint(context.Context, *RebindDeploymentFingerprintRequest) (*RebindDeploymentFingerprintResponse, error)
 	// GetAuditLog pages the audit trail, optionally filtered by target type and id.
 	GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error)
+	// ExportAuditLog returns the whole filtered trail as one downloadable document, for handing to an auditor offline.
+	ExportAuditLog(context.Context, *ExportAuditLogRequest) (*ExportAuditLogResponse, error)
 	// VerifyAuditChain recomputes the audit hash chain and reports whether the trail is intact.
 	VerifyAuditChain(context.Context, *VerifyAuditChainRequest) (*VerifyAuditChainResponse, error)
 	// OnSubscriptionUpdated applies a billing subscription change (seats, expiry, modules; cancels short-circuit) to a license.
@@ -999,8 +1075,14 @@ func (UnimplementedAdminServiceServer) RotateSigningKey(context.Context, *Rotate
 func (UnimplementedAdminServiceServer) ListSigningKeys(context.Context, *ListSigningKeysRequest) (*ListSigningKeysResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSigningKeys not implemented")
 }
+func (UnimplementedAdminServiceServer) RebindDeploymentFingerprint(context.Context, *RebindDeploymentFingerprintRequest) (*RebindDeploymentFingerprintResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RebindDeploymentFingerprint not implemented")
+}
 func (UnimplementedAdminServiceServer) GetAuditLog(context.Context, *GetAuditLogRequest) (*GetAuditLogResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAuditLog not implemented")
+}
+func (UnimplementedAdminServiceServer) ExportAuditLog(context.Context, *ExportAuditLogRequest) (*ExportAuditLogResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ExportAuditLog not implemented")
 }
 func (UnimplementedAdminServiceServer) VerifyAuditChain(context.Context, *VerifyAuditChainRequest) (*VerifyAuditChainResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method VerifyAuditChain not implemented")
@@ -1560,6 +1642,24 @@ func _AdminService_ListSigningKeys_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_RebindDeploymentFingerprint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RebindDeploymentFingerprintRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).RebindDeploymentFingerprint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_RebindDeploymentFingerprint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).RebindDeploymentFingerprint(ctx, req.(*RebindDeploymentFingerprintRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AdminService_GetAuditLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetAuditLogRequest)
 	if err := dec(in); err != nil {
@@ -1574,6 +1674,24 @@ func _AdminService_GetAuditLog_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).GetAuditLog(ctx, req.(*GetAuditLogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ExportAuditLog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExportAuditLogRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ExportAuditLog(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ExportAuditLog_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ExportAuditLog(ctx, req.(*ExportAuditLogRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1792,8 +1910,16 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AdminService_ListSigningKeys_Handler,
 		},
 		{
+			MethodName: "RebindDeploymentFingerprint",
+			Handler:    _AdminService_RebindDeploymentFingerprint_Handler,
+		},
+		{
 			MethodName: "GetAuditLog",
 			Handler:    _AdminService_GetAuditLog_Handler,
+		},
+		{
+			MethodName: "ExportAuditLog",
+			Handler:    _AdminService_ExportAuditLog_Handler,
 		},
 		{
 			MethodName: "VerifyAuditChain",

@@ -168,25 +168,34 @@ func (v *Verifier) VerifyAgentStatusOnline(s AgentStatus, cfg VerifyConfig) (*Li
 // VerifyAgentStatusOnlineAt is VerifyAgentStatusOnline with an explicit
 // reference time.
 func (v *Verifier) VerifyAgentStatusOnlineAt(s AgentStatus, cfg VerifyConfig, now time.Time) (*LicenseClaims, error) {
+	claims, _, err := v.verifyAgentStatusOnlineAt(s, cfg, now)
+	return claims, err
+}
+
+// verifyAgentStatusOnlineAt is the core of VerifyAgentStatusOnlineAt. It also
+// returns the verified lease (nil when the license requires none) so a caller in
+// this package — the Monitor — can re-check the lease's expiry on every read
+// rather than only when a new status arrives.
+func (v *Verifier) verifyAgentStatusOnlineAt(s AgentStatus, cfg VerifyConfig, now time.Time) (*LicenseClaims, *LeaseClaims, error) {
 	claims, err := v.VerifyAgentStatusAt(s, cfg, now)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if claims.RequireOnlineLease == 0 {
-		return claims, nil
+		return claims, nil, nil
 	}
 	if s.LeaseToken == "" {
-		return nil, fmt.Errorf("license sdk: license %s requires an online lease but the agent supplied none", claims.JTI)
+		return nil, nil, fmt.Errorf("license sdk: license %s requires an online lease but the agent supplied none", claims.JTI)
 	}
 	lease, err := v.VerifyLeaseTokenAt(s.LeaseToken, now)
 	if err != nil {
-		return nil, fmt.Errorf("license sdk: online lease: %w", err)
+		return nil, nil, fmt.Errorf("license sdk: online lease: %w", err)
 	}
 	if lease.LicenseJTI != claims.JTI {
-		return nil, fmt.Errorf("license sdk: lease is for license %q, not %q", lease.LicenseJTI, claims.JTI)
+		return nil, nil, fmt.Errorf("license sdk: lease is for license %q, not %q", lease.LicenseJTI, claims.JTI)
 	}
 	if lease.DepID != "" && s.DeploymentID != "" && lease.DepID != s.DeploymentID {
-		return nil, fmt.Errorf("license sdk: lease is for deployment %q, not %q", lease.DepID, s.DeploymentID)
+		return nil, nil, fmt.Errorf("license sdk: lease is for deployment %q, not %q", lease.DepID, s.DeploymentID)
 	}
-	return claims, nil
+	return claims, lease, nil
 }
