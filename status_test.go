@@ -394,7 +394,7 @@ func TestAgentStatus_JSONRoundTrip(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	var got map[string]any
-	if err := json.Unmarshal(raw, &got); err != nil {
+	if err = json.Unmarshal(raw, &got); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	for _, field := range []string{"deploymentId", "hasLicense", "valid", "message", "rawToken", "leaseToken"} {

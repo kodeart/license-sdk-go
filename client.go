@@ -104,7 +104,7 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 			break
 		}
 
-		c.Close()
+		_ = c.Close()
 		if attempt == maxRetries-1 {
 			break
 		}

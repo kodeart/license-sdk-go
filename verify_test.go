@@ -80,7 +80,7 @@ func TestVerifyLicenseToken_PerpetualExp(t *testing.T) {
 	}
 
 	token := signJWS(t, priv, "kid-1", claims)
-	if _, err := VerifyLicenseToken(token); err != nil {
+	if _, err = VerifyLicenseToken(token); err != nil {
 		t.Fatalf("VerifyLicenseToken: %v", err)
 	}
 

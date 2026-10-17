@@ -124,7 +124,7 @@ func (s AgentStatus) Verify(cfg VerifyConfig) (*LicenseClaims, error) {
 }
 
 // VerifyOnline is Verify, additionally requiring a live online lease for
-// licences that mandate one. See AgentStatus.VerifyOnline.
+// licenses that mandate one. See AgentStatus.VerifyOnline.
 func (s AgentStatus) VerifyOnline(cfg VerifyConfig) (*LicenseClaims, error) {
 	return defaultVerifier.VerifyAgentStatusOnline(s, cfg)
 }

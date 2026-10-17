@@ -63,7 +63,7 @@ func TestLoadKeyRingFile(t *testing.T) {
 		t.Fatalf("generate key: %v", err)
 	}
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "sk_2026_09.pub"), pub, 0o600); err != nil {
+	if err = os.WriteFile(filepath.Join(dir, "sk_2026_09.pub"), pub, 0o600); err != nil {
 		t.Fatalf("write key: %v", err)
 	}
 
@@ -82,7 +82,7 @@ func TestLoadPublicKeyFile(t *testing.T) {
 		t.Fatalf("generate key: %v", err)
 	}
 	path := filepath.Join(t.TempDir(), "sk.pub")
-	if err := os.WriteFile(path, pub, 0o600); err != nil {
+	if err = os.WriteFile(path, pub, 0o600); err != nil {
 		t.Fatalf("write key: %v", err)
 	}
 
@@ -103,7 +103,7 @@ func TestLoadKeyRing_VerifiesTokensByKid(t *testing.T) {
 		t.Fatalf("generate key: %v", err)
 	}
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "sk_2026_09.pub"), pub, 0o600); err != nil {
+	if err = os.WriteFile(filepath.Join(dir, "sk_2026_09.pub"), pub, 0o600); err != nil {
 		t.Fatalf("write key: %v", err)
 	}
 	keys, err := LoadKeyRingFile(dir)

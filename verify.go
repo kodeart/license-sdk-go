@@ -24,9 +24,7 @@ const clockSkew = 30 * time.Second
 //
 // Deprecated: use Verifier (NewVerifier with a LoadKeyRing result) instead. It
 // holds its keys behind a mutex, which the package-level SetPublicKeys cannot do.
-type KeySet struct {
-	keys map[string]ed25519.PublicKey
-}
+type KeySet struct{}
 
 // PublicKey is the server's default Ed25519 public key, used when a token
 // carries no "kid" header. Override it via SetPublicKey, or use SetPublicKeys
@@ -58,12 +56,6 @@ func SetPublicKeys(keys map[string]ed25519.PublicKey) {
 // a new key ahead of server-side rotation so existing tokens keep validating.
 func AddPublicKey(kid string, pk ed25519.PublicKey) {
 	defaultVerifier.AddKey(kid, pk)
-}
-
-// lookupKey resolves the public key for a JWS kid header against the
-// package-level key set. See Verifier.lookup for the resolution rules.
-func lookupKey(kid string) (ed25519.PublicKey, error) {
-	return defaultVerifier.lookup(kid)
 }
 
 // VerifyLicenseToken verifies the Ed25519 signature of a license token, checks
